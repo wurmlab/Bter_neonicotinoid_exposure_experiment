@@ -1,1 +1,2 @@
-## Differential expression analyis of Bombus terrestris in response to pesticide exposure.  
+### Project title: Differential expression analyis of _Bombus terrestris_ in response to pesticide exposure. 
+
