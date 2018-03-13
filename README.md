@@ -20,4 +20,6 @@ differential_expression_analysis/
 |- 2018-03-13-DE.Rmd # Working copy
 graphics_plots/
 |- 2018-02-28_graphics.Rmd
+transcript_quantification/
+|- run_kallisto.sh
 ```
