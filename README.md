@@ -8,6 +8,7 @@ Current workflow consists of:
 3. Differential expression analysis 
 4. Gene Ontology enrichment analysis
 
+#### Contents of repository
 ```
 differential_expression_analysis/
 |- archive/
@@ -17,4 +18,6 @@ differential_expression_analysis/
 |  |- LTR_analysis/
 |  |  |- de_genes.txt
 |- 2018-03-13-DE.Rmd # Working copy
+graphics_plots/
+|- 2018-02-28_graphics.Rmd
 ```
