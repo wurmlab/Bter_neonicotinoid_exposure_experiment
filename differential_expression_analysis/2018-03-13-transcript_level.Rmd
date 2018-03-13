@@ -11,7 +11,7 @@ This script produces a results table of genes that are significantly differentia
 ---
 
 ```{r}
-## load packages 
+## load packages: 
 library(tximport)
 library(readr)
 library(DESeq2)
@@ -76,50 +76,56 @@ colnames(tx2gene) <- c("TXNAME","GENEID")
 
 ## Use tximport on kallisto files 
 ## Counts are output for TPM values scaled to gene length:
-txi <- tximport(paths$kallisto_files, type = "kallisto", tx2gene = tx2gene)
+txi_transcripts <- tximport(paths$kallisto_files, type = "kallisto", txOut = T)
 
 ## Convert to dataframe for potential plots:
-colnames(txi$counts) <- names #label columns with treatments
+colnames(txi_transcripts$counts) <- names #label columns with treatments
 ## Extract count values:
-txi_counts_df <- as.data.frame(txi$counts)
+txi_transcripts_counts_df <- as.data.frame(txi_transcripts$counts)
+
+## For transcripts, rename column names:
+rownames(txi_transcripts_counts_df) <- gsub(x = rownames(txi_transcripts_counts_df), pattern = ".+rna_", replacement = "")
+head(txi_transcripts_counts_df)
+
 ## Save extracted count values:
-save(txi_counts_df, file = "txi_counts_df.Rdata")
+save(txi_transcripts_counts_df, file = "txi_transcripts_counts_df.Rdata")
 
 # Save object for use in other scripts
-save(txi, file = "txi.Rdata")
+save(txi_transcripts, file = "txi_transcripts.Rdata")
 
 ```
 ### Step Four: Run DESeq2 for differential expression analysis:
 
-### 1) Which genes are differentially expressed across all three treatments?
+### 1) Which transcripts are differentially expressed across all three treatments?
 
 ### Running a likelihood ratio test 
 Make sure that all files for each condition of interest are read into the DESEq object
 ```{r}
 ## Construct DESeq data set from txi object and sample information
-deseq_txi <- DESeqDataSetFromTximport(txi, 
+deseq_txi_transcripts <- DESeqDataSetFromTximport(txi_transcripts, 
                                       colData = samples, 
                                       design = ~ treatment) 
 
 ## Relevel treatments, so CON is defined as base
-deseq_txi$treatment <- relevel(deseq_txi$treatment, "CON")
-design(deseq_txi) <- ~ treatment
+deseq_txi_transcripts$treatment <- relevel(deseq_txi_transcripts$treatment, "CON")
+design(deseq_txi_transcripts) <- ~ treatment
 
 ## 1) Running a likelihood ratio test - for DE comparison across all treatments
 # Make sure that all files for each condition of interest are read into the DESEq object:
-deseq_object_LRT <- DESeq(deseq_txi, test = "LRT", reduced = ~ 1)
+deseq_trans_object_LRT <- DESeq(deseq_txi_transcripts, test = "LRT", reduced = ~ 1)
+rownames(deseq_trans_object_LRT) <- gsub(x = rownames(deseq_trans_object_LRT), pattern = ".+rna_", replacement = "")
 
 ## Generate a report of differentially expressed genes and output in folder 'reports':
-deseq_report <- HTMLReport(shortName = 'RNAseq_analysis_with_DESeq2',
-                         title = 'RNA-seq analysis of differential expressed transcripts using DESeq2',
-                         reportDirectory = "./reports")
+deseq_trans_report <- HTMLReport(shortName = 'Transcript_analysis_with_DESeq2',
+                         title = 'Transcript analysis of differential expressed transcripts using DESeq2',
+                         reportDirectory = "./trans_reports")
 
 ## Publish report:
-publish(deseq_object_LRT,deseq_report, pvalueCutoff = 0.05,
-        factor = colData(deseq_object_LRT)$treatment,
-        reportDir = "./reports")
+publish(deseq_trans_object_LRT,deseq_trans_report, pvalueCutoff = 0.05,
+        factor = colData(deseq_trans_object_LRT)$treatment,
+        reportDir = "./trans_reports")
         
-finish(deseq_report)
+finish(deseq_trans_report)
 
 ##===========================================================
 ## Subset the fold change differences between the treatments:
@@ -162,20 +168,29 @@ generate_pairwise_heatmap <- function(deseq_input, treatment_1, treatment_2, cou
                           significant_de_counts <- normalised_counts_df[row.names(de_genes),]
                           ## Return:
                           return(plot_heatmap3(significant_de_counts))
-                          }
-
+}
 
 ## Call function:
-generate_pairwise_heatmap(deseq_object_LRT, "CON", "CLO", txi_counts_df) 
+generate_pairwise_heatmap(deseq_trans_object_LRT, "CON", "CLO", txi_transcripts_counts_df) 
 
 ## Export results
-res <- results(deseq_object_LRT, contrast = c("treatment", "CON", "CLO"))
+de_transcripts_res <- results(deseq_trans_object_LRT, contrast = c("treatment", "CON", "CLO"))
 
 ## Subset statistically significant sites:
-de_genes_res <- res[which(res$padj < 0.05), ]
+de_transcripts_res_significant <- de_transcripts_res[which(de_transcripts_res$padj < 0.05), ]
 
-## Subset name of unique genes:
-de_unique_genes <- rownames(de_genes_res)
+## Update the transcript names to extract gene IDs:
+tx2gene$TXNAME <- gsub(x = tx2gene$TXNAME, pattern = ".+rna_", replacement = "")
+
+## Equate to how many genes?
+tx2gene_subset_trans <- tx2gene[tx2gene$TXNAME %in% rownames(de_transcripts_res_significant),]
+
+## Extract the number of unique genes:
+tx2gene_trans_unique_genes <- unique(tx2gene_subset_trans$GENEID)
+tx2gene_trans_unique_genes <- as.character(unlist(tx2gene_trans_unique_genes))
+
+## Subset differentially expressed transcripts with differentially expressed genes:
+tx2gene_trans_unique_genes[tx2gene_trans_unique_genes %in% de_unique_genes]
 
 # Save table for further use
 #save(deseq_results_significant, file = "deseq_results_significant.Rdata")
