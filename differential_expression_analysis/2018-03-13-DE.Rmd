@@ -92,9 +92,9 @@ save(txi, file = "txi.Rdata")
 
 ```
 ## Step Four: Run DESeq2 for differential expression analysis:
-##================================================================================================
+##==========================================================================
 ## 1) Which genes are differentially expressed across all three treatments?
-##================================================================================================
+##==========================================================================
 ## Running a likelihood ratio test 
 # Make sure that all files for each condition of interest are read into the DESEq object
 ```{r}
