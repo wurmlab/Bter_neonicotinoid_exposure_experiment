@@ -18,60 +18,63 @@ This can then be used for further analysis.
 
 ```{r}
 # Load libraries; install from scratch if needed
-
 libraries <- c("tximport", "readr", "DESeq2", "ggplot2", "gplots", 
                "ggfortify", "ReportingTools", "vsn", "RColorBrewer")
 for (lib in libraries) {
-  if (require(package = lib, character.only = TRUE)) {
-    print("Successful")
-  } else {
-    print("Installing")
-     source("https://bioconductor.org/biocLite.R")
-     biocLite(pkgs = lib)
-     library(lib, character.only = TRUE )
-  }
+    if (require(package = lib, character.only = TRUE)) {
+        print("Successful")
+    } else {
+        print("Installing")
+        source("https://bioconductor.org/biocLite.R")
+        biocLite(pkgs = lib)
+        library(lib, character.only = TRUE )
+    }
 }
 ```
 
+
 ## Step One: Input results from kallisto
+
+We use raw, non-normalised estimated counts.
 
 ```{r} 
 ## Set paths to folders containing output files from kallisto
 paths <- list()
-paths$data <- "." 
-paths$kallisto_output <- file.path(paths$data, "2018-02-13-kallisto_quantification")
+paths$kallisto_output <- "2018-02-13-kallisto_quantification"
 
 # Set relative paths:
-paths$kallisto_files_relative <- grep(x = list.files(paths$kallisto_output, recursive = TRUE),
-                                      pattern = ".tsv", value = TRUE)
+paths$kallisto_files_relative <- grep(x       = list.files(paths$kallisto_output, recursive = TRUE),
+                                      pattern = ".tsv", 
+                                      value   = TRUE)
 paths$kallisto_files <- file.path(paths$kallisto_output,
                                   paths$kallisto_files_relative)
 
-# Save path to use later
-kallisto_quant_file_path <- "2018-01-11-kallisto_quantification"
-
 # Automatically extract file names from kallisto output for colnames
-names_tmp <- gsub(x = paths$kallisto_files, pattern = "./2018-01-11-kallisto_quantification/2016-Bter-", replacement = "")
+names_tmp <- paths$kallisto_files
+names_tmp <- gsub(x = names_tmp, pattern     = "./2018-01-11-kallisto_quantification/2016-Bter-", 
+                  replacement = "")
 names_tmp <- gsub(x = names_tmp, pattern = "-head.+", replacement = "")
-names <- gsub(x = names_tmp, pattern = ".*Bter-", replacement = "")
+names     <- gsub(x = names_tmp, pattern = ".*Bter-", replacement = "")
 rm(names_tmp)
 ```
+
 
 ## Step Two: Put sample names and treatments into a samples dataframe for DESeqDataSetFromTximport
 
 ```{r}
 ## Extract sample names and put into df for tximport
 samples_tmp <- gsub(x = paths$kallisto_files, pattern = ".*Bter-", replacement = "")
-samples <- gsub(x = samples_tmp,     pattern = "-head.*",     replacement = "")
-samples  <- data.frame(treatment = samples)
+samples     <- gsub(x = samples_tmp,          pattern = "-head.*",replacement = "")
+samples     <- data.frame(treatment = samples)
 rownames(samples) <- samples$treatment
 samples$treatment <- gsub(x = samples$treatment ,     pattern = "-.*",     replacement = "")
 rm(samples_tmp)
 ```
 
+
 ## Step Three: Import kallisto quantification files using Tximport
 
-We used kalllisto to obtain estimated counts for each transcript in each condition. 
+We used kallisto to obtain estimated counts for each transcript in each condition. 
 We load these raw counts into R for DEseq using tximport. 
 Because we do a gene-level analysis first, transcript abundances are summarised per gene during import.
 
@@ -87,7 +90,7 @@ colnames(tx2gene) <- c("TXNAME","GENEID")
 # Use tximport on kallisto files 
 ## Counts are output for TPM values scaled to gene length:
 txi <- tximport(paths$kallisto_files, 
-                type = "kallisto", 
+                type    = "kallisto", 
                 tx2gene = tx2gene)
 
 ## Convert to dataframe for potential plots:
@@ -103,14 +106,14 @@ save(txi, file = "txi.Rdata")
 
 ### Step Four: Run DESeq2 for differential expression analysis:
 
-### Run DESeq2 for differential expression analysis 
-### For identifying differentially expressed genes, a DESeq object is generated containing:
-### a) sample names
-### b) treatments
-### Within the present analysis, three types of questions can be immediately asked:
-### 1) What genes are differentially expressed across all three treatments?
-### 2) What genes are differentially expressed within clothianidin-exposed workers in comparison to control?
-### 3) What genes are differentially expressed within imidacloprid-exposed workers in comparison to control?
+For identifying differentially expressed genes, a DESeq object is generated containing:
+    a. sample names
+    b. treatments
+    
+Within the present analysis, three types of questions can be immediately asked:
+    1. What genes are differentially expressed across all three treatments?
+    2. What genes are differentially expressed within clothianidin-exposed workers in comparison to control?
+    3. What genes are differentially expressed within imidacloprid-exposed workers in comparison to control?
 
 ```{r}
 ## Construct DESeq data set from txi object and sample information
@@ -120,7 +123,7 @@ deseq_txi <- DESeqDataSetFromTximport(txi,
 
 ## Relevel treatments, so CON is defined as base
 deseq_txi$treatment <- relevel(deseq_txi$treatment, "CON")
-design(deseq_txi) <- ~ treatment
+design(deseq_txi)   <- ~ treatment
 
 ##=========================================================================================
 ## 4.1) Which genes are differentially expressed across all three treatments?
@@ -148,7 +151,7 @@ test_CLO <- results(deseq_object_LRT, contrast = c("treatment", "CON", "CLO"), t
 deseq_results_shrink_CON_CLO <- lfcShrink(deseq_object_LRT, contrast = c("treatment", "CON", "CLO"))
 
 ## Order results by adjusted p-value, which will be the same for each treatment comparison but log fold changes will occur:
-deseq_results_ordered_CON_CLO <- deseq_results_shrink_CON_CLO[order(deseq_results_shrink_CON_CLO$padj),]
+deseq_results_ordered_CON_CLO    <- deseq_results_shrink_CON_CLO[order(deseq_results_shrink_CON_CLO$padj),]
 
 ## Subset significant genes:
 deseq_results_significant_CON_CLO <- deseq_results_ordered_CON_CLO[which(deseq_results_ordered_CON_CLO$padj < 0.05), ]
