@@ -196,7 +196,7 @@ de_logchange_CON_IMI_high <- deseq_results_significant_CON_IMI[deseq_results_sig
 de_logchange_CON_IMI_low <- deseq_results_significant_CON_IMI[deseq_results_significant_CON_IMI$log2FoldChange > 0,]
 
 ##=========================================================================================
-## 4.4 Generate a report on fold changes between treatements
+## 4.3 Generate a report on fold changes between treatements
 ##=========================================================================================
 
 ## Generate a report of differentially expressed genes and output in folder 'reports'.
@@ -214,7 +214,7 @@ publish(deseq_object_LRT,deseq_report, pvalueCutoff = 0.05,
 finish(deseq_report)
 
 ##=========================================================================================
-## 4.5 Visualise fold change differences between the treatments:
+## 4.4 Visualise fold change differences between the treatments:
 ##=========================================================================================
 ## Generate results table for DE genes between treatments:
 
