@@ -82,8 +82,7 @@ colnames(tx2gene) <- c("TXNAME","GENEID")
 ## Counts are output for TPM values scaled to gene length:
 txi <- tximport(paths$kallisto_files, 
                 type = "kallisto", 
-                #tx2gene = tx2gene)
-                txOut = T)
+                tx2gene = tx2gene)
 
 ## Convert to dataframe for potential plots:
 colnames(txi$counts) <- names #label columns with treatments
