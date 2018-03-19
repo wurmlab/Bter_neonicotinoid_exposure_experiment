@@ -1,0 +1,99 @@
+---
+title: "Bombus pesticide exposure: gene expression in head"
+output: GO_enrichment_3treatments.html
+---
+# Introduction 
+This script is for Gene Ontology (GO) analysis of differentiallly expressed genes to explore the biological processes and molecular functions associated with DE genes, using the R package 'TopGO' (https://www.bioconductor.org/packages/3.7/bioc/vignettes/topGO/inst/doc/topGO.pdf).
+Input files should be a .txt file of 'genes of interest' generated from differential gene expression analysis, using the R package DESeq2 and a database of GO terms mapped to the genome of interest. 
+This script will prepare data for GO analysis and create a 'TopGO object' from which enrichment tests can be performed to explore GO terms significantly enriched within the dataset. 
+This script produces a results table of significantly enriched GO terms.
+
+```{r}
+# Load libraries; install from scratch if needed
+libraries <- c("topGO")
+for (lib in libraries) {
+    if (require(package = lib, character.only = TRUE)) {
+        print("Successful")
+    } else {
+        print("Installing")
+        source("https://bioconductor.org/biocLite.R")
+        biocLite(pkgs = lib)
+        library(lib, character.only = TRUE )
+    }
+}
+```
+
+## Step One: Input files and define objects for topGO
+
+We use a list of significantly differentially expressed genes and an input database of GO terms.
+```{r}
+# Set input files:
+genes_of_interest <- read.table("LRT_genes.txt",header = FALSE, sep = "\t")
+genes_of_interest <- as.character(genes_of_interest$V1)
+
+# Read in GO annotations
+geneID2GO <- readMappings(file = "blast2go_mapping_20171223_1007.input_database_for_topGO.txt")
+
+# Define gene 'universe'
+gene_universe <- names(geneID2GO) 
+
+# Tell TOPGO where these interesting genes appear in gene universe vector
+gene_list <- factor(as.integer(gene_universe %in% genes_of_interest))
+names(gene_list) <- gene_universe
+
+```
+
+## Step Two: Create topGO data object, using BP for 'Biological Processes'
+```{r}
+## Variables to define - 'BP' or 'MF'
+GO_term_type <- 'BP'
+
+# build the GOdata object in topGO
+myGOdata <- new("topGOdata", 
+                description="My project", 
+                ontology=GO_term_type, 
+                #geneSel = function(x) {return(x=TRUE)}, # Run just for ks test
+                geneSel = function(x) {return(x < cutoff_for_top_fivepercent)}, # only used for fisher test
+                allGenes=gene_list,  
+                gene2GO = geneID2GO, 
+                annot = annFUN.gene2GO, 
+                nodeSize=100)
+
+```
+
+## Step Two: Run statistical tests for GO term enrichment
+```{r}
+## Calculate ks test using 'elim' algorithm
+resultElimKs <- runTest(myGOdata, algorithm="elim", statistic="ks")
+
+## Calculate ks test using 'weight01' algorithm:
+resultWeightKs <- runTest(myGOdata, algorithm="weight01", statistic="ks")
+
+## Calculate fisher exact test using 'weight01' algorithm:
+resultWeightFisher <- runTest(myGOdata, algorithm="weight01", statistic="fisher")
+
+## Combine results from statistical tests:
+allRes <- GenTable(myGOdata, 
+                   kselim = resultElimKs, 
+                   weight = resultWeightKs, 
+                   weightfisher =resultWeightFisher,
+                   orderBy = "weightfisher", 
+                   topNodes = 2038) 
+
+# Filter out calls with significance higher than expected:
+allRes <- allRes[which(allRes$Significant > allRes$Expected), ]
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
