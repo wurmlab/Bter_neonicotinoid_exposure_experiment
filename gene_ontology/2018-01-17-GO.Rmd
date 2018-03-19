@@ -1,0 +1,295 @@
+---
+title: "Gene Ontology analysis"
+output: html_notebook 
+---
+
+####This script is for Gene Ontology (GO) analysis of differentiallly expressed genes to explore the biological processes and molecular functions associated with DE genes, using the R package 'TopGO' (https://www.bioconductor.org/packages/3.7/bioc/vignettes/topGO/inst/doc/topGO.pdf).
+####Input data for this script is a .txt file of 'genes of interest' generated from differential gene expression analysis, using the R package DESeq2. Input should also be a database of GO terms mapped to the genome of interest. 
+####This script will prepare data for GO analysis and create a 'TopGO object' from which enrichment tests can be performed to explore GO terms significantly enriched within the dataset. 
+####This script produces .csv files of significant GO terms and their description, and .csv files for the genes that are annotated to particular GO terms. 
+
+```{r}
+#load packages 
+source("http://bioconductor.org/biocLite.R")
+biocLite()
+biocLite("topGO")
+library("topGO")
+library(magicfor)
+
+### set wd 
+setwd("/Users/isabelfletcher/Documents/LIDo/R1/RNAseq/2018-01-15-Gene_Ontology")
+
+```
+
+#Step One
+##Create TopGO object
+```{r}
+#read in gene GO annotations for genes
+geneID_GO_terms <- readMappings(file = "blast2go_mapping_20171223_1007.input_database_for_topGO.txt")
+
+#define gene 'universe'
+gene_universe <- names(geneID_GO_terms) 
+
+#define genes of interest and read in, genes of interest should be significant genes generated from DE script
+genes_of_interest <- read.table("LOC_gene_names.txt",header = FALSE) #(see WHATIDID_LOC_gene_names.txt to generate list of gene names from de_output.txt)
+genes_of_interest <- as.character(genes_of_interest$V1)
+
+#tell TOPGO where these interesting genes appear in gene universe vector
+gene_list <- factor(as.integer(gene_universe %in% genes_of_interest))
+names(gene_list) <- gene_universe
+
+#Put data into an object of type 'topGOdata'
+## Store data for terms associated with 'biological processes':
+myGOdata_BP <- new("topGOdata", 
+                   description = "Bombus_CLO_diff_express_GO", 
+                   ontology = "BP", 
+                   allGenes = gene_list,  
+                   annot = annFUN.gene2GO, 
+                   gene2GO = geneID_GO_terms)
+
+## Store data for terms associated with 'molecular function':
+myGOdata_MF <- new("topGOdata",
+                   description = "Bombus_CLO_diff_express_GO",
+                   ontology = "MF", 
+                   allGenes = gene_list,  
+                   annot = annFUN.gene2GO, 
+                   gene2GO = geneID_GO_terms)
+
+## Store data for terms associated with 'cellular component':
+myGOdata_CC <- new("topGOdata",
+                   description = "Bombus_CLO_diff_express_GO",
+                   ontology = "CC", 
+                   allGenes = gene_list,  
+                   annot = annFUN.gene2GO, 
+                   gene2GO = geneID_GO_terms)
+
+
+#view TopGO data object
+myGOdata_BP
+myGOdata_MF
+myGOdata_CC
+```
+
+
+#Step Two
+##(A) Perform GO-term enrichment tests for GO terms associated with 'biological processes':
+```{r}
+#Perform 'KS' test using 'elim' approach for terms associated with 'biological processes':
+result_KS_BP <- runTest(myGOdata_BP,
+                        algorithm = "elim", 
+                        statistic = "ks") 
+
+#generate results table
+allGO_BP <- usedGO(object = myGOdata_BP)
+res_KS_table_BP <- GenTable(myGOdata_BP, result_KS_BP, topNodes = length(allGO_BP))
+
+##adjust p values for multiple testing
+res_KS_table_BP$Bonferroni = p.adjust(res_KS_table_BP$result1, method = "bonferroni")
+res_KS_table_BP$BH         = p.adjust(res_KS_table_BP$result1, method = "BH")
+res_KS_table_BP$Holm       = p.adjust(res_KS_table_BP$result1, method = "holm")
+res_KS_table_BP$Hochberg   = p.adjust(res_KS_table_BP$result1, method = "hochberg")
+res_KS_table_BP$Hommel     = p.adjust(res_KS_table_BP$result1, method = "hommel")
+res_KS_table_BP$BY         = p.adjust(res_KS_table_BP$result1, method = "BY")
+
+```
+
+# Comparison to Fisher test
+```{r}
+#Perform 'KS' test using 'elim' approach for terms associated with 'biological processes':
+result_fisher_BP <- runTest(myGOdata_BP,
+                        algorithm = "elim", 
+                        statistic = "fisher") 
+
+#generate results table
+allGO_BP <- usedGO(object = myGOdata_BP)
+res_fisher_table_BP <- GenTable(myGOdata_BP, result_fisher_BP, topNodes = length(allGO_BP))
+
+##adjust p values for multiple testing
+res_fisher_table_BP$Bonferroni = p.adjust(res_KS_table_BP$result1, method = "bonferroni")
+res_fisher_table_BP$BH         = p.adjust(res_fisher_table_BP$result1, method = "BH")
+res_fisher_table_BP$Holm       = p.adjust(res_fisher_table_BP$result1, method = "holm")
+res_fisher_table_BP$Hochberg   = p.adjust(res_fisher_table_BP$result1, method = "hochberg")
+res_fisher_table_BP$Hommel     = p.adjust(res_fisher_table_BP$result1, method = "hommel")
+res_fisher_table_BP$BY         = p.adjust(res_fisher_table_BP$result1, method = "BY")
+
+
+GO_significant_BP_fisher <- res_fisher_table_BP[which(res_fisher_table_BP$result1 < 0.05),]
+GO_significant_BP_fisher <- GO_significant_BP_fisher[which(GO_significant_BP_fisher$Significant > 10),]
+```
+
+##(B) Perform GO-term enrichment tests for GO terms associated with 'molecular function':
+```{r}
+#perform 'KS' test using 'elim' approach for terms associated with 'molecular function':
+result_KS_MF <- runTest(myGOdata_MF, 
+                        algorithm = "elim", 
+                        statistic = "ks") 
+
+#generate results table
+allGO_MF <- usedGO(object = myGOdata_MF)
+res_KS_table_MF <- GenTable(myGOdata_MF, result_KS_MF, topNodes = length(allGO_MF))
+
+
+res_KS_table_MF$Bonferroni = p.adjust(res_KS_table_MF$result1, method = "bonferroni")
+res_KS_table_MF$BH         = p.adjust(res_KS_table_MF$result1, method = "BH")
+res_KS_table_MF$Holm       = p.adjust(res_KS_table_MF$result1, method = "holm")
+res_KS_table_MF$Hochberg   = p.adjust(res_KS_table_MF$result1, method = "hochberg")
+res_KS_table_MF$Hommel     = p.adjust(res_KS_table_MF$result1, method = "hommel")
+res_KS_table_MF$BY         = p.adjust(res_KS_table_MF$result1, method = "BY")
+```
+
+##(C) Perform GO-term enrichment tests for GO terms associated with 'cellular component':
+```{r}
+#perform 'KS' test using 'elim' approach for terms associated with 'cellular component':
+result_KS_CC <- runTest(myGOdata_CC, 
+                        algorithm = "elim", 
+                        statistic = "ks") 
+
+#generate results table
+allGO_CC <- usedGO(object = myGOdata_CC)
+res_KS_table_CC <- GenTable(myGOdata_CC, result_KS_CC, topNodes = length(allGO_CC))
+
+
+res_KS_table_CC$Bonferroni = p.adjust(res_KS_table_CC$result1, method = "bonferroni")
+res_KS_table_CC$BH         = p.adjust(res_KS_table_CC$result1, method = "BH")
+res_KS_table_CC$Holm       = p.adjust(res_KS_table_CC$result1, method = "holm")
+res_KS_table_CC$Hochberg   = p.adjust(res_KS_table_CC$result1, method = "hochberg")
+res_KS_table_CC$Hommel     = p.adjust(res_KS_table_CC$result1, method = "hommel")
+res_KS_table_CC$BY         = p.adjust(res_KS_table_CC$result1, method = "BY")
+```
+
+#Step Three:
+##Create table of significant GO terms 
+```{r}
+#select significant results only
+go_significant_BP <- res_KS_table_BP[which(res_KS_table_BP$result1 < 0.05),]
+go_significant_MF <- res_KS_table_MF[which(res_KS_table_MF$result1 < 0.05),]
+go_significant_CC <- res_KS_table_CC[which(res_KS_table_CC$result1 < 0.05),]
+
+
+# Filter GO terms based on no. GO terms mapped to 'significant' genes (i.e. DE genes from DESeq output)
+# GO terms with >10 significant DE genes mapped
+go_significant_BP <- go_significant_BP[(go_significant_BP$Significant >= 1),]
+go_significant_MF <- go_significant_MF[(go_significant_MF$Significant >= 1),]
+go_significant_CC <- go_significant_CC[(go_significant_CC$Significant >= 1),]
+
+go_significant_BP_10 <- go_significant_BP[(go_significant_BP$Significant >= 10),]
+
+# Order GO terms by no. significant genes mapped
+go_significant_BP_DE_genes <- go_significant_BP[order(-go_significant_BP$Significant),]
+go_significant_MF_DE_genes <- go_significant_MF[order(-go_significant_MF$Significant),]
+go_significant_CC_DE_genes <- go_significant_CC[order(-go_significant_CC$Significant),]
+
+#View results table of significant GO terms
+go_significant_BP
+go_significant_MF
+go_significant_CC
+
+#export results tables for further use
+write.csv(go_significant_BP, "go_terms_biological_processes.csv")
+write.csv(go_significant_MF, "go_terms_molecular_function.csv")
+write.csv(go_significant_CC, "go_terms_cellular_component.csv")
+
+```
+
+
+#Step Four:
+##Find genes that are annotated to particular GO terms:
+##(A) Biological processes:
+```{r}
+#to list all GO terms and their associated genes:
+magic_for(print, silent = TRUE, temp = TRUE)
+go_ID_BP <- go_significant_BP$GO.ID #select GO IDs from GO results table
+genes_BP <- genesInTerm(myGOdata_BP, go_ID_BP)#select genes annotated from GO results table
+
+#loop to list all 
+for (i in 1:length(go_ID_BP))
+{myterm_BP <- go_ID_BP[i]
+  mygenesforterm_BP <- genes_BP[myterm_BP][[1]] 
+  myfactor_BP <- mygenesforterm_BP %in% genes_of_interest
+  mygenesforterm2_BP <- mygenesforterm_BP[myfactor_BP == TRUE] 
+  mygenesforterm2_BP <- paste(mygenesforterm2_BP, collapse = ',') 
+  print(paste("Term",myterm_BP,"genes:",mygenesforterm2_BP))
+} 
+
+#store GO terms and their genes in a df
+go_term_genes_BP <- magic_result_as_dataframe()
+
+#export object for further use 
+write.csv(go_term_genes_BP, "go_term_genes_BP.csv")
+```
+
+##(B) Molecular function: - ANNOTATE THIS
+```{r}
+#to list all GO terms and their associated genes:
+magic_for(print, silent = TRUE, temp = TRUE)
+go_ID_MF <- go_significant_MF$GO.ID
+genes_MF <- genesInTerm(myGOdata_MF, go_ID_MF)
+
+for (i in 1:length(go_ID_MF))
+{myterm_MF <- go_ID_MF[i]
+  mygenesforterm_MF <- genes_MF[myterm_MF][[1]] 
+  myfactor_MF <- mygenesforterm_MF %in% genes_of_interest
+  mygenesforterm2_MF <- mygenesforterm_MF[myfactor_MF == TRUE] 
+  mygenesforterm2_MF <- paste(mygenesforterm2_MF, collapse = ',')
+  print(paste("Term",myterm_MF,"genes:",mygenesforterm2_MF)) 
+}
+
+#store GO terms and their genes in a df
+go_term_genes_MF <- magic_result_as_dataframe()
+#export object for further use 
+write.csv(go_term_genes_MF, "go_term_genes_MF.csv")
+
+#to find genes annotated to a particular GO term of interest, e.g. GO:0032094 'response to food'
+
+magic_for(print, silent = FALSE, temp = TRUE)
+myterms_BP = c("GO:0032094")
+mygenes_BP <- genesInTerm(myGOdata_BP, myterms_BP)
+for (i in 1:length(myterms_BP))
+   {myterm_BP <- myterms_BP[i]
+       mygenesforterm_BP <- mygenes_BP[myterm_BP][[1]]
+       mygenesforterm_BP <- paste(mygenesforterm_BP, collapse = ',') 
+       print(paste("Term",myterm_BP,"genes:",mygenesforterm_BP))
+}
+
+```
+
+
+```{r}
+## Combine results table
+combined_GO <- rbind(go_significant_BP, go_significant_MF, go_significant_CC)
+
+## Select most enriched GO terms
+combined_GO_DE_gene <- combined_GO[order(-combined_GO$Significant),] 
+
+# Export top 30 for further use
+write.csv(head(combined_GO_DE_gene,30), file = "go_30_enriched_genes.csv")
+
+## Select most significant
+combined_GO_sig <- combined_GO[order(combined_GO$result1),] 
+write.csv(head(combined_GO_sig,30), file = "go_30_sig.csv")
+
+```
+
+
+```{r}
+myterms <- go_significant_BP$GO.ID
+mygenes <- genesInTerm(myGOdata_BP, myterms)
+for (i in 1:length(myterms))
+{
+   myterm <- myterms[i]
+   mygenesforterm <- mygenes[myterm][[1]] 
+   myfactor <- mygenesforterm %in% genes_of_interest # find the genes that are in the list of genes of interest
+   mygenesforterm2 <- mygenesforterm[myfactor == TRUE] 
+   mygenesforterm2 <- paste(mygenesforterm2, collapse = ',')
+   print(paste("Term",myterm,"genes:",mygenesforterm2))
+}
+
+```
+
+
+
+
+
+
+
+
