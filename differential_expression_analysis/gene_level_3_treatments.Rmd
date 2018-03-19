@@ -37,6 +37,9 @@ for (lib in libraries) {
 We use raw, non-normalised estimated counts.
 
 ```{r} 
+## Set working directory:
+setwd("/Volumes/apocrita/autoScratch/2017-08-11_bombus_transcriptomics_pesticides_exp_1/results/2018-02-24_multi_analysis/2018-03-05_ifletcher_analysis/2018-02-28-Differential_Expression")
+
 ## Set paths to folders containing output files from kallisto
 paths <- list()
 paths$kallisto_output <- "2018-02-13-kallisto_quantification"
@@ -87,10 +90,17 @@ tx2gene <- read.table("./rna_and_corresponding_gene_ids.txt", header = FALSE)
 colnames(tx2gene) <- c("TXNAME","GENEID")
 
 # Use tximport on kallisto files 
-## Counts are output for TPM values scaled to gene length:
-txi <- tximport(paths$kallisto_files, 
+## Counts are estimated counts from kallisto:
+txi_counts <- tximport(paths$kallisto_files, 
                 type    = "kallisto", 
-                tx2gene = tx2gene)
+                tx2gene = tx2gene,
+                countsFromAbundance = "no")
+
+## Counts are output for TPM values scaled to gene length:
+txi_tpm <- tximport(paths$kallisto_files, 
+                type    = "kallisto", 
+                tx2gene = tx2gene,
+                countsFromAbundance = "scaledTPM")
 
 ## Convert to dataframe for potential plots:
 colnames(txi$counts) <- names #label columns with treatments
@@ -115,32 +125,49 @@ Within the present analysis, three types of questions can be immediately asked:
     3. What genes are differentially expressed within imidacloprid-exposed workers in comparison to control?
 
 ```{r}
-## Construct DESeq data set from txi object and sample information
-deseq_txi <- DESeqDataSetFromTximport(txi, 
+## Construct DESeq data set from txi object and sample information:
+deseq_counts_txi <- DESeqDataSetFromTximport(txi, 
+                                      colData = samples, 
+                                      design = ~ treatment)
+
+## Construct DESeq data set from rounded matrix counts and sample information:
+deseq_tpm_txi <- DESeqDataSetFromMatrix(round(txi$counts), 
                                       colData = samples, 
                                       design = ~ treatment) 
 
-## Relevel treatments, so CON is defined as base
-deseq_txi$treatment <- relevel(deseq_txi$treatment, "CON")
-design(deseq_txi)   <- ~ treatment
+## Relevel treatments, so CON is defined as base:
+deseq_counts_txi$treatment <- relevel(deseq_counts_txi$treatment, "CON")
+design(deseq_counts_txi)   <- ~ treatment
+
+deseq_tpm_txi$treatment <- relevel(deseq_tpm_txi$treatment, "CON")
+design(deseq_tpm_txi)   <- ~ treatment
+```
 
 ##=========================================================================================
 ## 4.1) Which genes are differentially expressed across all three treatments?
 ##=========================================================================================
 
-## 1) Running a likelihood ratio test - for DE comparison across all treatments
-## Make sure that all files for each condition of interest are read into the DESEq object:
+```{r}
+#1) Running a likelihood ratio test - for DE comparison across all treatments
+#Make sure that all files for each condition of interest are read into the DESEq object:
+
+## Assign which dataset to use i.e. deseq_counts_txi or deseq_tpm_txi:
+deseq_txi <- deseq_counts_txi
+
+## Run liklihood-ratio test:
 deseq_object_LRT <- DESeq(deseq_txi, test = "LRT", reduced = ~ 1)
+```
 
 ##=========================================================================================
 ## 4.2) Identify log fold changes between treatments for genes differentially expressed:
 ## a) Clothianidin vs. control
 ##=========================================================================================
 
-## The LRT will output a single adjusted p-value for each significant gene.
-## By default, the log fold change reported will be between the first two treatments, which
-## 'control' and 'clothianidin' but you can also specify treatments to compare using the
-## 'contrast' parameter:
+The LRT will output a single adjusted p-value for each significant gene.
+By default, the log fold change reported will be between the first two treatments, which
+'control' and 'clothianidin' but you can also specify treatments to compare using the 'contrast' parameter:
+
+```{r}
 ## Generate results table for DE genes between treatments, specifying contrasts:
 deseq_results_CON_CLO <- results(deseq_object_LRT, contrast = c("treatment", "CON", "CLO"))
 
@@ -174,12 +201,14 @@ de_genes <- rownames(deseq_results_significant)
 # Export object into .txt file, for GO analysis
 write(de_genes, "de_genes.txt")
 save(de_genes, file = "de_genes.Rdata")
+```
 
 ##=========================================================================================
 ## 4.2) Identify log fold changes between treatments for genes differentially expressed:
 ## b) Imidacloprid vs. control
 ##=========================================================================================
 
+```{r}
 ## Control vs. Imidacloprid:
 deseq_results_CON_IMI <- results(deseq_object_LRT, contrast = c("treatment", "CON", "IMI"))
 
@@ -202,28 +231,32 @@ de_logchange_CON_IMI_high <- deseq_results_significant_CON_IMI[deseq_results_sig
 
 # Genes less expressed in IMI treatment, compared to CON i.e. positive lfc values
 de_logchange_CON_IMI_low <- deseq_results_significant_CON_IMI[deseq_results_significant_CON_IMI$log2FoldChange > 0,]
+```
 
 ##=========================================================================================
 ## 4.3 Generate a report on fold changes between treatements
 ##=========================================================================================
 
+```{r}
 ## Generate a report of differentially expressed genes and output in folder 'reports'.
 ## Report results in the generation of boxplots for each statistically significant gene:
 deseq_report <- HTMLReport(shortName = 'RNAseq_analysis_with_DESeq2',
                            title     = 'RNA-seq analysis of differential expressed transcripts using DESeq2',
-                           reportDirectory = "./reports")
+                           reportDirectory = "./tpm_scaled_reports")
 
 ## Publish report:
 publish(deseq_object_LRT,deseq_report, pvalueCutoff = 0.05,
         factor = colData(deseq_object_LRT)$treatment,
-        reportDir = "./reports")
+        reportDir = "./tpm_scaled_reports")
 
 ## Complete the report:        
 finish(deseq_report)
+```
 
 ##=========================================================================================
 ## 4.4 Visualise fold change differences between the treatments:
 ##=========================================================================================
+```{r}
 ## Generate results table for DE genes between treatments:
 
 # Set colour pattern for plotting
@@ -264,17 +297,17 @@ generate_pairwise_heatmap <- function(deseq_input, treatment_1, treatment_2, cou
 
 ## Call function:
 generate_pairwise_heatmap(deseq_object_LRT, "CON", "CLO", txi_counts_df) 
-
 ```
+
 ### Step Five: Run DESeq2 (Wald test) for differential expression analysis:
 
-### Which genes are differentially expressed between each treatment and control?
+Which genes are differentially expressed between each treatment and control?
 Running a Wald t-test (default test within DESeq2)
 
 ```{r}
-##=========================================================================================================
+##======================================================================================
 ## 5.1) Which genes are differentially expressed within clothianidin-exposed workers in comparison to control?
-##=========================================================================================================
+##======================================================================================
 ## Perform a pairwise comparison between treatments:
 deseq_object_pairwise  <- DESeq(deseq_txi, test = "Wald") #fit model to txi object 
 
@@ -306,11 +339,13 @@ save(de_genes_pairwise_CLO, file = "de_genes_pairwise_CLO.Rdata")
 
 # Export gene names object into .txt file, for GO analysis genes of interest 
 write(de_genes_pairwise_CLO, "de_genes_pairwise_CLO.txt")
+```
 
-##=========================================================================================================
+##=======================================================================================
 ## 5.2 Which genes are differentially expressed within imidacloprid-exposed workers in comparison to control?
-##=========================================================================================================
+##=======================================================================================
 
+```{r}
 ## Perform a pairwise comparison between treatments
 deseq_results_pairwise_IMI <- results(deseq_object_pairwise, contrast = c("treatment", "CON", "IMI")) #results of model
 
@@ -322,7 +357,6 @@ deseq_results_pairwise_IMI_ordered <- deseq_results_pairwise_IMI_shrink[order(de
 
 # No. genes p < 0.05
 deseq_results_pairwise_IMI_significant <- deseq_results_pairwise_IMI_ordered[which(deseq_results_pairwise_IMI_ordered$padj < 0.05), ] # n = 1
-
 ```
 
 ### Step Six: Principal Components Analysis
