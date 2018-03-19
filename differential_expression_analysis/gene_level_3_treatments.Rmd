@@ -37,9 +37,6 @@ for (lib in libraries) {
 We use raw, non-normalised estimated counts.
 
 ```{r} 
-## Set working directory:
-setwd("/Volumes/apocrita/autoScratch/2017-08-11_bombus_transcriptomics_pesticides_exp_1/results/2018-02-24_multi_analysis/2018-03-05_ifletcher_analysis/2018-02-28-Differential_Expression")
-
 ## Set paths to folders containing output files from kallisto
 paths <- list()
 paths$kallisto_output <- "2018-02-13-kallisto_quantification"
