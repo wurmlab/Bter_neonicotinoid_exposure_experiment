@@ -100,14 +100,15 @@ txi_tpm <- tximport(paths$kallisto_files,
                 countsFromAbundance = "scaledTPM")
 
 ## Convert to dataframe for potential plots:
-colnames(txi$counts) <- names #label columns with treatments
+colnames(txi_counts$counts) <- names #label columns with treatments
+
 ## Extract count values:
-txi_counts_df <- as.data.frame(txi$counts)
+txi_counts_df <- as.data.frame(txi_counts$counts)
 ## Save extracted count values:
 save(txi_counts_df, file = "txi_counts_df.Rdata")
 
 # Save object for use in other scripts
-save(txi, file = "txi.Rdata")
+save(txi_counts, file = "txi_counts.Rdata")
 ```
 
 ### Step Four: Run DESeq2 for differential expression analysis:
@@ -123,12 +124,12 @@ Within the present analysis, three types of questions can be immediately asked:
 
 ```{r}
 ## Construct DESeq data set from txi object and sample information:
-deseq_counts_txi <- DESeqDataSetFromTximport(txi, 
+deseq_counts_txi <- DESeqDataSetFromTximport(txi_counts, 
                                       colData = samples, 
                                       design = ~ treatment)
 
 ## Construct DESeq data set from rounded matrix counts and sample information:
-deseq_tpm_txi <- DESeqDataSetFromMatrix(round(txi$counts), 
+deseq_tpm_txi <- DESeqDataSetFromMatrix(round(txi_counts$counts), 
                                       colData = samples, 
                                       design = ~ treatment) 
 
