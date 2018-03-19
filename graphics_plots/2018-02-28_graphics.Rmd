@@ -1,0 +1,73 @@
+--- 
+title: "Graphical representation of DE genes"
+output: 2018-02-28-graphics.nb.html
+--- 
+---
+
+## Introduction:
+#=================
+##This script is for exploratory analysis of transcript quantification data and results of differential gene expression analysis.
+##Input files should be R objects saved and generated from previous scripts of DE analysis, including the object resulting from using tximport() on kallisto files, the significant transcript abundances selected from this object and a results table of significant genes, generated using DESeq2. 
+##This script will organise input data for generating heatmaps of significantly differentially expressed genes, based on statistical significance and log fold changes in expression.
+##This script produces heatmaps that can be exported. 
+
+```{r}
+## setwd 
+setwd("/Volumes/apocrita/autoScratch/2017-08-11_bombus_transcriptomics_pesticides_exp_1/results/2018-02-24_multi_analysis/2018-03-05_ifletcher_analysis/2018-02-28-Differential_Expression") 
+
+#load packages 
+library(ggplot2)
+library(gplots)
+library(heatmap3)
+library(ggfortify)
+library(ggDESeq)
+library(DESeq2)
+
+#load R objects from previous scripts to be used 
+load("txi.Rdata")
+load("txi_counts_df.Rdata")
+load("deseq_object_LRT.Rdata")
+load("de_genes.Rdata")
+
+```
+
+## Step One: Heatmaps for visualisation of significantly differentially expressed transcripts (from DE script)
+```{r}
+## Select relevant gene counts from DESeq results (de_genes)
+# normalise counts 
+normalised_counts_df <- t(scale(t(txi_counts_df), center = TRUE, scale = TRUE))
+
+# Select significant gene counts?
+significant_de_counts <- normalised_counts_df[de_genes,]
+# Add sample numbers to columns 
+colnames(significant_de_counts) <- gsub(x = colnames(significant_de_counts), pattern = "-C.*", replacement = "")
+colnames(significant_de_counts) <- paste(colnames(significant_de_counts),+rep(1:4,2))
+
+```
+
+## Function for heatmap
+```{r}
+# Set colour pattern for plotting
+scalepurpleyellow <- colorRampPalette(colors = c("blue", "purple", "yellow"))(250)
+
+## The function takes a z-normalised dataframe as input
+plot_heatmap3 <- function(input){
+                  heatmap.2(input, 
+                  col = scalepurpleyellow, 
+                  trace = "none",
+                  margins = c(10,14), 
+                  sepwidth = c(0.01, 0.01), 
+                  sepcolor = "black", 
+                  colsep = 1:ncol(input),
+                  rowsep = 1:nrow(input),
+                  cexRow = 1,
+                  Colv = NULL,
+                  labRow = rownames(input))
+}
+```
+
+## Plot heatmap
+```{r}
+plot_heatmap3(significant_de_counts)
+
+```
