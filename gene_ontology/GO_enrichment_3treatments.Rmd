@@ -25,15 +25,17 @@ for (lib in libraries) {
 
 ## Step One: Input files and define objects for topGO
 
-We use a list of significantly differentially expressed genes and an input database of GO terms.
+We use two lists of significantly differentially expressed genes and an input database of GO terms.
+
+a) Differential gene expression across all three treatments
 ```{r}
 # Set input files:
-genes_of_interest <- read.table("de_genes_for_topGO.txt", header=T)
+genes_of_interest_3_treatments <- read.table("de_genes_for_topGO.txt", header = T)
 
 ## Sort by adjusted p-value:
-genes_of_interest_sorted <- genes_of_interest[order(genes_of_interest$adjusted_pvalue), ]
+genes_of_interest_3_treatments_sorted <- genes_of_interest_3_treatments[order(genes_of_interest_3_treatments$adjusted_pvalue), ]
 ## Remove na values:
-genes_of_interest_sorted_filtered <- genes_of_interest_sorted[!is.na(genes_of_interest_sorted$adjusted_pvalue),]
+genes_of_interest_3_treatments_sorted_filtered <- genes_of_interest_3_treatments_sorted[!is.na(genes_of_interest_3_treatments_sorted$adjusted_pvalue),]
 
 # Read in GO annotations
 geneID2GO <- readMappings(file = "blast2go_mapping_20171223_1007.input_database_for_topGO.txt")
@@ -42,17 +44,42 @@ geneID2GO <- readMappings(file = "blast2go_mapping_20171223_1007.input_database_
 gene_universe <- names(geneID2GO) 
 
 ## Create genelist
-geneList <-genes_of_interest_sorted_filtered$adjusted_pvalue
-names(geneList) <- genes_of_interest_sorted_filtered$locus
+geneList_3_treatments <- genes_of_interest_3_treatments_sorted_filtered$adjusted_pvalue
+names(geneList_3_treatments) <- genes_of_interest_3_treatments_sorted_filtered$locus
 
 # Define a cut-off:
-cutoff_for_top_fivepercent <- quantile(x = geneList, probs = 0.05)
+cutoff_for_top_fivepercent <- quantile(x = geneList_3_treatments, probs = 0.05)
 
 # Tell TOPGO where these interesting genes appear in gene universe vector
 #gene_list <- factor(as.integer(gene_universe %in% genes_of_interest))
 #names(gene_list) <- gene_universe
 
 ```
+
+b) Differential gene expression for CON vs. CLO pairwise comparison
+```{r}
+# Set input files:
+genes_of_interest_pairwise_CON_CLO <- read.table("de_genes_pairwise_CLO.txt", header = T)
+
+## Sort by adjusted p-value:
+genes_of_interest_pairwise_CON_CLO_sorted <- genes_of_interest_pairwise_CON_CLO[order(genes_of_interest_pairwise_CON_CLO$adjusted_pvalue),]
+## Remove na values:
+genes_of_interest_pairwise_CON_CLO_sorted_filtered <- genes_of_interest_pairwise_CON_CLO_sorted[!is.na(genes_of_interest_pairwise_CON_CLO_sorted$adjusted_pvalue),]
+
+## Create genelist
+geneList_pairwise_CON_CLO <- genes_of_interest_pairwise_CON_CLO_sorted_filtered$adjusted_pvalue
+names(geneList_pairwise_CON_CLO) <- genes_of_interest_pairwise_CON_CLO_sorted_filtered$locus
+
+# Define a cut-off:
+cutoff_for_top_fivepercent <- quantile(x = genes_of_interest_pairwise_CON_CLO, probs = 0.05)
+
+# Tell TOPGO where these interesting genes appear in gene universe vector
+#gene_list <- factor(as.integer(gene_universe %in% genes_of_interest))
+#names(gene_list) <- gene_universe
+
+```
+
+
 
 ## Step Two: Create topGO data object, using BP for 'Biological Processes'
 We create a topGO object using GO terms associated with 'Biological Processes'
@@ -61,13 +88,26 @@ We create a topGO object using GO terms associated with 'Biological Processes'
 ## Variables to define - 'BP' or 'MF'
 GO_term_type <- 'BP'
 
-# build the GOdata object in topGO
-myGOdata <- new("topGOdata", 
-                description="My project", 
-                ontology=GO_term_type, 
+##### build the GOdata object in topGO
+
+## Three treatments 
+myGOdata_3_treatments <- new("topGOdata", 
+                description = "My project", 
+                ontology = GO_term_type, 
                 #geneSel = function(x) {return(x=TRUE)}, # Run just for ks test
                 geneSel = function(x) {return(x < cutoff_for_top_fivepercent)}, # only used for fisher test
-                allGenes=gene_list,  
+                allGenes = geneList_3_treatments,  
+                gene2GO = geneID2GO, 
+                annot = annFUN.gene2GO, 
+                nodeSize=100)
+
+## Pairwise CON vs. CLO
+myGOdata_pairwise_CON_CLO <- new("topGOdata", 
+                description = "My project", 
+                ontology = GO_term_type, 
+                #geneSel = function(x) {return(x=TRUE)}, # Run just for ks test
+                geneSel = function(x) {return(x < cutoff_for_top_fivepercent)}, # only used for fisher test
+                allGenes = geneList_pairwise_CON_CLO ,  
                 gene2GO = geneID2GO, 
                 annot = annFUN.gene2GO, 
                 nodeSize=100)
@@ -82,36 +122,65 @@ We perform three statistical tests:
 We combine the output of each test. 
 We filter out enriched terms.
 
+a) For all three treatments
 ```{r}
 ## Calculate ks test using 'elim' algorithm
-resultElimKs <- runTest(myGOdata, algorithm="elim", statistic="ks")
+resultElimKs_3_treatments <- runTest(myGOdata_3_treatments, algorithm = "elim", statistic = "ks")
 
 ## Calculate ks test using 'weight01' algorithm:
-resultWeightKs <- runTest(myGOdata, algorithm="weight01", statistic="ks")
+resultWeightKs_3_treatments <- runTest(myGOdata_3_treatments, algorithm = "weight01", statistic = "ks")
 
 ## Calculate fisher exact test using 'weight01' algorithm:
-resultWeightFisher <- runTest(myGOdata, algorithm="weight01", statistic="fisher")
+resultWeightFisher_3_treatments <- runTest(myGOdata_3_treatments, algorithm = "weight01", statistic = "fisher")
 
 ## Combine results from statistical tests:
-allRes <- GenTable(myGOdata, 
-                   kselim = resultElimKs, 
-                   weight = resultWeightKs, 
-                   weightfisher =resultWeightFisher,
+allRes_3_treatments <- GenTable(myGOdata_3_treatments, 
+                   kselim = resultElimKs_3_treatments, 
+                   weight = resultWeightKs_3_treatments, 
+                   weightfisher = resultWeightFisher_3_treatments,
                    orderBy = "weight", 
                    topNodes = 2038) 
 
 # Filter out calls with significance higher than expected:
-allRes <- allRes[which(allRes$Significant > allRes$Expected), ]
+allRes_3_treatments <- allRes_3_treatments[which(allRes_3_treatments$Significant > allRes_3_treatments$Expected), ]
 
 ## Print to console one of the GO terms of interest:
-print(showGroupDensity(myGOdata, 
+print(showGroupDensity(myGOdata_3_treatments, 
                        "GO:0044707", 
                        ranks = TRUE, 
-                       rm.one=FALSE))
+                       rm.one = FALSE))
 
 ```
 
+b) For pairwise comparison CON vs. CLO
+```{r}
+## Calculate ks test using 'elim' algorithm
+resultElimKs_pairwise_CON_CLO <- runTest(myGOdata_pairwise_CON_CLO, algorithm = "elim", statistic = "ks")
 
+## Calculate ks test using 'weight01' algorithm:
+resultWeightKs_pairwise_CON_CLO <- runTest(myGOdata_pairwise_CON_CLO, algorithm = "weight01", statistic = "ks")
+
+## Calculate fisher exact test using 'weight01' algorithm:
+resultWeightFisher_pairwise_CON_CLO <- runTest(myGOdata_pairwise_CON_CLO, algorithm = "weight01", statistic = "fisher")
+
+## Combine results from statistical tests:
+allRes_pairwise_CON_CLO <- GenTable(myGOdata_pairwise_CON_CLO, 
+                   kselim = resultElimKs_pairwise_CON_CLOs, 
+                   weight = resultWeightKs_pairwise_CON_CLO, 
+                   weightfisher = resultWeightFisher_pairwise_CON_CLO,
+                   orderBy = "weight", 
+                   topNodes = 2038) 
+
+# Filter out calls with significance higher than expected:
+allRes_pairwise_CON_CLO <- allRes_pairwise_CON_CLO[which(allRes_pairwise_CON_CLO$Significant > allRes_pairwise_CON_CLO$Expected), ]
+
+## Print to console one of the GO terms of interest:
+print(showGroupDensity(myGOdata_pairwise_CON_CLO, 
+                       "GO:0044707", 
+                       ranks = TRUE, 
+                       rm.one = FALSE))
+
+```
 
 
 
