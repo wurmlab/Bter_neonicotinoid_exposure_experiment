@@ -28,8 +28,12 @@ for (lib in libraries) {
 We use a list of significantly differentially expressed genes and an input database of GO terms.
 ```{r}
 # Set input files:
-genes_of_interest <- read.table("LRT_genes.txt",header = FALSE, sep = "\t")
-genes_of_interest <- as.character(genes_of_interest$V1)
+genes_of_interest <- read.table("de_genes_for_topGO.txt", header=T)
+
+## Sort by adjusted p-value:
+genes_of_interest_sorted <- genes_of_interest[order(genes_of_interest$adjusted_pvalue), ]
+## Remove na values:
+genes_of_interest_sorted_filtered <- genes_of_interest_sorted[!is.na(genes_of_interest_sorted$adjusted_pvalue),]
 
 # Read in GO annotations
 geneID2GO <- readMappings(file = "blast2go_mapping_20171223_1007.input_database_for_topGO.txt")
@@ -37,13 +41,22 @@ geneID2GO <- readMappings(file = "blast2go_mapping_20171223_1007.input_database_
 # Define gene 'universe'
 gene_universe <- names(geneID2GO) 
 
+## Create genelist
+geneList <-genes_of_interest_sorted_filtered$adjusted_pvalue
+names(geneList) <- genes_of_interest_sorted_filtered$locus
+
+# Define a cut-off:
+cutoff_for_top_fivepercent <- quantile(x = geneList, probs = 0.05)
+
 # Tell TOPGO where these interesting genes appear in gene universe vector
-gene_list <- factor(as.integer(gene_universe %in% genes_of_interest))
-names(gene_list) <- gene_universe
+#gene_list <- factor(as.integer(gene_universe %in% genes_of_interest))
+#names(gene_list) <- gene_universe
 
 ```
 
 ## Step Two: Create topGO data object, using BP for 'Biological Processes'
+We create a topGO object using GO terms associated with 'Biological Processes'
+
 ```{r}
 ## Variables to define - 'BP' or 'MF'
 GO_term_type <- 'BP'
@@ -58,10 +71,17 @@ myGOdata <- new("topGOdata",
                 gene2GO = geneID2GO, 
                 annot = annFUN.gene2GO, 
                 nodeSize=100)
-
 ```
 
-## Step Two: Run statistical tests for GO term enrichment
+## Step Three: Run statistical tests for GO term enrichment
+We perform three statistical tests:
+1. A ks test using the topGO 'elim' algorithm
+2. A ks test using the topGO 'weight01' algorithm
+3. A Fisher test using the topGO 'weight01' algoritm
+
+We combine the output of each test. 
+We filter out enriched terms.
+
 ```{r}
 ## Calculate ks test using 'elim' algorithm
 resultElimKs <- runTest(myGOdata, algorithm="elim", statistic="ks")
@@ -77,11 +97,17 @@ allRes <- GenTable(myGOdata,
                    kselim = resultElimKs, 
                    weight = resultWeightKs, 
                    weightfisher =resultWeightFisher,
-                   orderBy = "weightfisher", 
+                   orderBy = "weight", 
                    topNodes = 2038) 
 
 # Filter out calls with significance higher than expected:
 allRes <- allRes[which(allRes$Significant > allRes$Expected), ]
+
+## Print to console one of the GO terms of interest:
+print(showGroupDensity(myGOdata, 
+                       "GO:0044707", 
+                       ranks = TRUE, 
+                       rm.one=FALSE))
 
 ```
 
