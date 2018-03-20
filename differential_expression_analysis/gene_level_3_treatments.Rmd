@@ -39,7 +39,7 @@ We use raw, non-normalised estimated counts.
 ```{r} 
 ## Set paths to folders containing output files from kallisto
 paths <- list()
-paths$kallisto_output <- "2018-02-13-kallisto_quantification"
+paths$kallisto_output <- "./2018-02-28-Differential_Expression/2018-02-13-kallisto_quantification"
 
 # Set relative paths:
 paths$kallisto_files_relative <- grep(x       = list.files(paths$kallisto_output, recursive = TRUE),
@@ -50,7 +50,7 @@ paths$kallisto_files <- file.path(paths$kallisto_output,
 
 # Automatically extract file names from kallisto output for colnames
 names_tmp <- paths$kallisto_files
-names_tmp <- gsub(x = names_tmp, pattern     = "./2018-01-11-kallisto_quantification/2016-Bter-", 
+names_tmp <- gsub(x = names_tmp, pattern     = "./2018-02-28-Differential_Expression/2018-01-11-kallisto_quantification/2016-Bter-", 
                   replacement = "")
 names_tmp <- gsub(x = names_tmp, pattern = "-head.+", replacement = "")
 names     <- gsub(x = names_tmp, pattern = ".*Bter-", replacement = "")
@@ -191,14 +191,25 @@ de_logchange_CON_CLO_high <- de_logchange_CON_CLO[deseq_results_significant_CON_
 de_logchange_CON_CLO_low <- de_logchange_CON_CLO[deseq_results_significant_CON_CLO$log2FoldChange > 0,]
 
 # Save table for further use
-save(deseq_results_significant, file = "deseq_results_significant.Rdata")
+save(deseq_results_significant_CON_CLO, file = "deseq_results_significant.Rdata")
 
 # Put significant DE gene names into an object
-de_genes <- rownames(deseq_results_significant)
+de_genes <- rownames(deseq_results_significant_CON_CLO)
 
 # Export object into .txt file, for GO analysis
 write(de_genes, "de_genes.txt")
 save(de_genes, file = "de_genes.Rdata")
+
+## For running topGO, we want a list of genes plus adjusted p-values:
+de_genes_for_topGO <- as.data.frame(cbind(rownames(test_CLO), test_CLO$padj))
+
+## Update column names:
+colnames(de_genes_for_topGO) <- c("locus", "adjusted_pvalue")
+
+## Write to output:
+write.table(de_genes_for_topGO, file="de_genes_for_topGO.txt", row.names=F, sep="\t")
+
+
 ```
 
 ##=========================================================================================
