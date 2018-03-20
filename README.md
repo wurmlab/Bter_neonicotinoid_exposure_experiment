@@ -18,7 +18,9 @@ differential_expression_analysis/
 |  |- LTR_analysis/
 |  |  |- de_genes.txt
 |- 2018-03-13-DE.Rmd # Working copy
-|- 2018-03-13-transcript_level.Rmd 
+|- 2018-03-13-transcript_level.Rmd
+gene_ontology/
+|- GO_enrichment_3treatments.Rmd	
 graphics_plots/
 |- 2018-02-28_graphics.Rmd
 transcript_quantification/
