@@ -17,7 +17,7 @@ This can then be used for further analysis.
 
 ```{r}
 # Load libraries; install from scratch if needed
-libraries <- c("tximport", "readr", "DESeq2", "ggplot2", "gplots", 
+libraries <- c("tximport", "readr", "DESeq2", "ggplot2", "gplots", "rhdf5",
                "ggfortify", "ReportingTools", "vsn", "RColorBrewer")
 for (lib in libraries) {
     if (require(package = lib, character.only = TRUE)) {
@@ -29,6 +29,7 @@ for (lib in libraries) {
         library(lib, character.only = TRUE )
     }
 }
+dir.create("results")
 ```
 
 
@@ -39,7 +40,7 @@ We use raw, non-normalised estimated counts.
 ```{r} 
 ## Set paths to folders containing output files from kallisto
 paths <- list()
-paths$kallisto_output <- "./2018-02-28-Differential_Expression/2018-02-13-kallisto_quantification"
+paths$kallisto_output <- "input/kallisto_quantification"
 
 # Set relative paths:
 paths$kallisto_files_relative <- grep(x       = list.files(paths$kallisto_output, recursive = TRUE),
@@ -49,12 +50,21 @@ paths$kallisto_files <- file.path(paths$kallisto_output,
                                   paths$kallisto_files_relative)
 
 # Automatically extract file names from kallisto output for colnames
-names_tmp <- paths$kallisto_files
-names_tmp <- gsub(x = names_tmp, pattern     = "./2018-02-28-Differential_Expression/2018-01-11-kallisto_quantification/2016-Bter-", 
+filenames_tmp <- paths$kallisto_files
+filenames_tmp <- gsub(x = filenames_tmp, pattern     = file.path(paths$kallisto_output, "2016-Bter-"), 
                   replacement = "")
-names_tmp <- gsub(x = names_tmp, pattern = "-head.+", replacement = "")
-names     <- gsub(x = names_tmp, pattern = ".*Bter-", replacement = "")
-rm(names_tmp)
+filenames_tmp <- gsub(x = filenames_tmp, pattern = "-head.+", replacement = "")
+filenames     <- gsub(x = filenames_tmp, pattern = ".*Bter-", replacement = "")
+names(paths$kallisto_files) <- filenames 
+
+for (filenumber in 1:length(paths$kallisto_files)) {
+  current_name <- names(paths$kallisto_files)[filenumber]
+  current_file <- paths$kallisto_files[filenumber]
+  if (FALSE == grepl(pattern = current_name, x = current_file)) {
+    kill("we have a problem - names and filenames dont match up")
+  }
+}
+rm(filenames_tmp, filenames)
 ```
 
 
@@ -79,7 +89,7 @@ Because we do a gene-level analysis first, transcript abundances are summarised 
 
 ```{r}
 # Read in file corresponding to transcripts to gene ids
-tx2gene <- read.table("./rna_and_corresponding_gene_ids.txt", header = FALSE)
+tx2gene <- read.table("input/rna_and_corresponding_gene_ids.txt", header = FALSE)
 
 # Assign column names
 # Column 1: transcript name
@@ -89,26 +99,25 @@ colnames(tx2gene) <- c("TXNAME","GENEID")
 # Use tximport on kallisto files 
 ## Counts are estimated counts from kallisto:
 txi_counts <- tximport(paths$kallisto_files, 
-                type    = "kallisto", 
-                tx2gene = tx2gene,
-                countsFromAbundance = "no")
+                       type    = "kallisto", 
+                       tx2gene = tx2gene,
+                       countsFromAbundance = "no")
 
 ## Counts are output for TPM values scaled to gene length:
-txi_tpm <- tximport(paths$kallisto_files, 
-                type    = "kallisto", 
-                tx2gene = tx2gene,
-                countsFromAbundance = "scaledTPM")
+#txi_tpm <- tximport(paths$kallisto_files, 
+#                    type    = "kallisto", 
+#                    tx2gene = tx2gene,
+#                    countsFromAbundance = "scaledTPM")
+
 
 ## Convert to dataframe for potential plots:
-colnames(txi_counts$counts) <- names #label columns with treatments
-
 ## Extract count values:
 txi_counts_df <- as.data.frame(txi_counts$counts)
 ## Save extracted count values:
-save(txi_counts_df, file = "txi_counts_df.Rdata")
+save(txi_counts_df, file = "results/txi_counts_df.Rdata")
 
 # Save object for use in other scripts
-save(txi_counts, file = "txi_counts.Rdata")
+save(txi_counts, file = "results/txi_counts.Rdata")
 ```
 
 ### Step Four: Run DESeq2 for differential expression analysis:
