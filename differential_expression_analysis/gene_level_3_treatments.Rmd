@@ -89,12 +89,9 @@ Because we do a gene-level analysis first, transcript abundances are summarised 
 
 ```{r}
 # Read in file corresponding to transcripts to gene ids
-tx2gene <- read.table("input/rna_and_corresponding_gene_ids.txt", header = FALSE)
-
-# Assign column names
-# Column 1: transcript name
-# Column 2: gene name
-colnames(tx2gene) <- c("TXNAME","GENEID")
+tx2gene <- read.table(file      = "input/rna_and_corresponding_gene_ids.txt", 
+                      header    = FALSE, 
+                      col.names = c("TXNAME","GENEID")) # i.e., transcript name, gene name
 
 # Use tximport on kallisto files 
 ## Counts are estimated counts from kallisto:
