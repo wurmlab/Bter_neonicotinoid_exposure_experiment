@@ -77,6 +77,8 @@ samples     <- gsub(x = samples_tmp,          pattern = "-head.*",replacement = 
 samples     <- data.frame(treatment = samples)
 rownames(samples) <- samples$treatment
 samples$treatment <- gsub(x = samples$treatment ,     pattern = "-.*",     replacement = "")
+samples$treatment <- as.factor(samples$treatment)
+samples$treatment <- relevel(x = samples$treatment, ref = "CON") 
 rm(samples_tmp)
 ```
 
@@ -100,19 +102,6 @@ txi_counts <- tximport(paths$kallisto_files,
                        tx2gene = tx2gene,
                        countsFromAbundance = "no")
 
-## Counts are output for TPM values scaled to gene length:
-#txi_tpm <- tximport(paths$kallisto_files, 
-#                    type    = "kallisto", 
-#                    tx2gene = tx2gene,
-#                    countsFromAbundance = "scaledTPM")
-
-
-## Convert to dataframe for potential plots:
-## Extract count values:
-txi_counts_df <- as.data.frame(txi_counts$counts)
-## Save extracted count values:
-save(txi_counts_df, file = "results/txi_counts_df.Rdata")
-
 # Save object for use in other scripts
 save(txi_counts, file = "results/txi_counts.Rdata")
 ```
@@ -130,21 +119,9 @@ Within the present analysis, three types of questions can be immediately asked:
 
 ```{r}
 ## Construct DESeq data set from txi object and sample information:
-deseq_counts_txi <- DESeqDataSetFromTximport(txi_counts, 
-                                      colData = samples, 
-                                      design = ~ treatment)
-
-## Construct DESeq data set from rounded matrix counts and sample information:
-deseq_tpm_txi <- DESeqDataSetFromMatrix(round(txi_counts$counts), 
-                                      colData = samples, 
-                                      design = ~ treatment) 
-
-## Relevel treatments, so CON is defined as base:
-deseq_counts_txi$treatment <- relevel(deseq_counts_txi$treatment, "CON")
-design(deseq_counts_txi)   <- ~ treatment
-
-deseq_tpm_txi$treatment <- relevel(deseq_tpm_txi$treatment, "CON")
-design(deseq_tpm_txi)   <- ~ treatment
+deseq_counts_txi <- DESeqDataSetFromTximport(txi     = txi_counts, 
+                                             colData = samples, 
+                                             design  = ~ treatment)
 ```
 
 ##=========================================================================================
