@@ -18,7 +18,7 @@ This can then be used for further analysis.
 ```{r}
 # Load libraries; install from scratch if needed
 libraries <- c("tximport", "readr", "DESeq2", "ggplot2", "gplots", "rhdf5",
-               "ggfortify", "ReportingTools", "vsn", "RColorBrewer")
+               "plyr", "ggfortify", "ReportingTools", "vsn", "RColorBrewer")
 for (lib in libraries) {
     if (require(package = lib, character.only = TRUE)) {
         print("Successful")
@@ -73,7 +73,7 @@ rm(filenames_tmp, filenames)
 ```{r}
 ## Extract sample names and put into df for tximport
 samples_tmp <- gsub(x = paths$kallisto_files, pattern = ".*Bter-", replacement = "")
-samples     <- gsub(x = samples_tmp,          pattern = "-head.*",replacement = "")
+samples     <- gsub(x = samples_tmp,          pattern = "-head.*", replacement = "")
 samples     <- data.frame(treatment = samples)
 rownames(samples) <- samples$treatment
 samples$treatment <- gsub(x = samples$treatment ,     pattern = "-.*",     replacement = "")
@@ -119,9 +119,9 @@ Within the present analysis, three types of questions can be immediately asked:
 
 ```{r}
 ## Construct DESeq data set from txi object and sample information:
-deseq_counts_txi <- DESeqDataSetFromTximport(txi     = txi_counts, 
-                                             colData = samples, 
-                                             design  = ~ treatment)
+deseq_txi <- DESeqDataSetFromTximport(txi     = txi_counts, 
+                                      colData = samples, 
+                                      design  = ~ treatment)
 ```
 
 ##=========================================================================================
@@ -132,11 +132,8 @@ deseq_counts_txi <- DESeqDataSetFromTximport(txi     = txi_counts,
 #1) Running a likelihood ratio test - for DE comparison across all treatments
 #Make sure that all files for each condition of interest are read into the DESEq object:
 
-## Assign which dataset to use i.e. deseq_counts_txi or deseq_tpm_txi:
-deseq_txi <- deseq_counts_txi
-
 ## Run liklihood-ratio test:
-deseq_object_LRT <- DESeq(deseq_txi, test = "LRT", reduced = ~ 1)
+deseq_object_LRT <- DESeq(object = deseq_txi, test = "LRT", reduced = ~ 1)
 ```
 
 ##=========================================================================================
@@ -158,41 +155,37 @@ test_CLO <- results(deseq_object_LRT, contrast = c("treatment", "CON", "CLO"), t
 deseq_results_shrink_CON_CLO <- lfcShrink(deseq_object_LRT, contrast = c("treatment", "CON", "CLO"))
 
 ## Order results by adjusted p-value, which will be the same for each treatment comparison but log fold changes will occur:
-deseq_results_ordered_CON_CLO     <- deseq_results_shrink_CON_CLO[order(deseq_results_shrink_CON_CLO$padj),]
+deseq_results_ordered_CON_CLO <- deseq_results_shrink_CON_CLO[order(deseq_results_shrink_CON_CLO$padj),]
 
 ## Subset significant genes:
-deseq_results_significant_CON_CLO <- deseq_results_ordered_CON_CLO[which(deseq_results_ordered_CON_CLO$padj < 0.05), ]
+deseq_results_significant_CON_CLO <- subset(x = deseq_results_ordered_CON_CLO, subset = padj < 0.05)
 
 ## To identify direction of expression (over or under expressed):
 # Order DE genes by lfc
 de_logchange_CON_CLO <- deseq_results_significant_CON_CLO[order(deseq_results_significant_CON_CLO$log2FoldChange),]
 
 # Genes more highly expressed in CLO treatment, compared to CON i.e. negative lfc values
-de_logchange_CON_CLO_high <- de_logchange_CON_CLO[deseq_results_significant_CON_CLO$log2FoldChange < 0,]
+de_logchange_CON_CLO_high <- subset(x = de_logchange_CON_CLO, subset = log2FoldChange < 0)
 
 # Genes less expressed in CLO treatment, compared to CON
-de_logchange_CON_CLO_low <- de_logchange_CON_CLO[deseq_results_significant_CON_CLO$log2FoldChange > 0,]
+de_logchange_CON_CLO_low  <- subset(x = de_logchange_CON_CLO, subset = log2FoldChange > 0)
 
 # Save table for further use
-save(deseq_results_significant_CON_CLO, file = "deseq_results_significant.Rdata")
+save(deseq_results_significant_CON_CLO, file = "results/deseq_results_significant.Rdata")
 
 # Put significant DE gene names into an object
 de_genes <- rownames(deseq_results_significant_CON_CLO)
 
 # Export object into .txt file, for GO analysis
-write(de_genes, "de_genes.txt")
-save(de_genes, file = "de_genes.Rdata")
+write(de_genes, "results/de_genes.txt")
+save(de_genes, file = "results/de_genes.Rdata")
 
 ## For running topGO, we want a list of genes plus adjusted p-values:
-de_genes_for_topGO <- as.data.frame(cbind(rownames(test_CLO), test_CLO$padj))
-
-## Update column names:
-colnames(de_genes_for_topGO) <- c("locus", "adjusted_pvalue")
+de_genes_for_topGO <- data.frame(locus           = row.names(test_CLO), 
+                                 adjusted_pvalue = test_CLO$padj)
 
 ## Write to output:
-write.table(de_genes_for_topGO, file="de_genes_for_topGO.txt", row.names=F, sep="\t")
-
-
+write.table(de_genes_for_topGO, file="results/de_genes_for_topGO.txt", row.names = FALSE, sep="\t")
 ```
 
 ##=========================================================================================
@@ -234,12 +227,12 @@ de_logchange_CON_IMI_low <- deseq_results_significant_CON_IMI[deseq_results_sign
 ## Report results in the generation of boxplots for each statistically significant gene:
 deseq_report <- HTMLReport(shortName = 'RNAseq_analysis_with_DESeq2',
                            title     = 'RNA-seq analysis of differential expressed transcripts using DESeq2',
-                           reportDirectory = "./tpm_scaled_reports")
+                           reportDirectory = "results/tpm_scaled_reports")
 
 ## Publish report:
-publish(deseq_object_LRT,deseq_report, pvalueCutoff = 0.05,
+publish(deseq_object_LRT, deseq_report, pvalueCutoff = 0.05,
         factor = colData(deseq_object_LRT)$treatment,
-        reportDir = "./tpm_scaled_reports")
+        reportDir = "results/tpm_scaled_reports")
 
 ## Complete the report:        
 finish(deseq_report)
