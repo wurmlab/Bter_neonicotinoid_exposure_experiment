@@ -12,43 +12,32 @@ output: 2018-02-28-graphics.nb.html
 ##This script produces heatmaps that can be exported. 
 
 ```{r}
-## setwd 
-setwd("/Volumes/apocrita/autoScratch/2017-08-11_bombus_transcriptomics_pesticides_exp_1/results/2018-02-24_multi_analysis/2018-03-05_ifletcher_analysis/2018-02-28-Differential_Expression") 
+# Load libraries; install from scratch if needed
+libraries <- c("ggplot2", "gplots", "heatmap3", "ggfortify", "ggDESeq")
+for (lib in libraries) {
+    if (require(package = lib, character.only = TRUE)) {
+        print("Successful")
+    } else {
+        print("Installing")
+        source("https://bioconductor.org/biocLite.R")
+        biocLite(pkgs = lib)
+        library(lib, character.only = TRUE )
+    }
+}
 
-#load packages 
-library(ggplot2)
-library(gplots)
-library(heatmap3)
-library(ggfortify)
-library(ggDESeq)
-library(DESeq2)
-
-#load R objects from previous scripts to be used 
-load("txi.Rdata")
-load("txi_counts_df.Rdata")
+# Load R objects from previous script output
+load("txi_counts.Rdata")
 load("deseq_object_LRT.Rdata")
-load("de_genes.Rdata")
+load("deseq_object_pairwise.Rdata")
 
 ```
 
-## Step One: Heatmaps for visualisation of significantly differentially expressed transcripts (from DE script)
+
+## Step One: Heatmaps for visualisation of significantly differentially expressed transcripts
 ```{r}
-## Select relevant gene counts from DESeq results (de_genes)
-# normalise counts 
-normalised_counts_df <- t(scale(t(txi_counts_df), center = TRUE, scale = TRUE))
-
-# Select significant gene counts?
-significant_de_counts <- normalised_counts_df[de_genes,]
-# Add sample numbers to columns 
-colnames(significant_de_counts) <- gsub(x = colnames(significant_de_counts), pattern = "-C.*", replacement = "")
-colnames(significant_de_counts) <- paste(colnames(significant_de_counts),+rep(1:4,2))
-
-```
-
-## Function for heatmap
-```{r}
-# Set colour pattern for plotting
-scalepurpleyellow <- colorRampPalette(colors = c("blue", "purple", "yellow"))(250)
+## Generate results table for DE genes between treatments:
+# Set colour pattern
+scalepurpleyellow <- colorRampPalette(colors = c("black", "white", "red"))(400)
 
 ## The function takes a z-normalised dataframe as input
 plot_heatmap3 <- function(input){
@@ -64,10 +53,54 @@ plot_heatmap3 <- function(input){
                   Colv = NULL,
                   labRow = rownames(input))
 }
-```
+  
+###### a) Heatmap of all three treatments ######
+## Select relevant gene counts from DESeq results (de_genes)
+# normalise counts 
+normalised_counts_df <- t(scale(t(txi_counts$counts), center = TRUE, scale = TRUE))
 
-## Plot heatmap
-```{r}
+# Select significant gene counts?
+significant_de_counts <- normalised_counts_df[de_genes,]
+# Add sample numbers to columns 
+colnames(significant_de_counts) <- gsub(x = colnames(significant_de_counts), pattern = "-C.*", replacement = "")
+colnames(significant_de_counts) <- paste(colnames(significant_de_counts),+rep(1:4,2))
+
+# Plot
 plot_heatmap3(significant_de_counts)
+  
+  
+
+###### b) Heatmap of pairwise comparisons between treatments ######
+
+## Create function to generate results tables for pairwise comparisons:
+generate_pairwise_heatmap <- function(deseq_input, treatment_1, treatment_2, counts_input){
+                          ## Shrink log fold changes:
+                          deseq_results_shrink <- lfcShrink(deseq_input, contrast = c("treatment", treatment_1, treatment_2))
+                          ## Reorder results:
+                          deseq_results_shrink_ordered <- deseq_results_shrink[order(deseq_results_shrink$padj),]
+                          ## Subset significant values:
+                          de_genes <- deseq_results_shrink_ordered[which(deseq_results_shrink_ordered$padj < 0.05), ]
+                          ## Print to console:
+                          print(nrow(de_genes))
+                          # normalise counts 
+                          normalised_counts_df <- t(scale(t(counts_input), center = TRUE, scale = TRUE))
+                          # Select significant gene counts
+                          significant_de_counts <- normalised_counts_df[row.names(de_genes),]
+                          ## Return:
+                          return(plot_heatmap3(significant_de_counts))
+}
+
+## Call function:
+generate_pairwise_heatmap(deseq_object_LRT, "CON", "CLO", txi_counts$counts) 
+                          
 
 ```
+
+
+
+
+
+
+
+
+
