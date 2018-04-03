@@ -12,6 +12,7 @@ and their corresponding gene ids (LOC numbers)/.
 This script will import abundance files from Kallisto and use the R package [DESeq2](http://bioconductor.org/packages/release/bioc/html/DESeq.html) on count data to test for 
 differential expression based on a model using negative binomial distribution.
 This script produces a results table of genes that are significantly differentially expressed. 
+This script uses the likelihood ratio (LRT) in DESeq2 to test for differential expression across all treatments.
 This can then be used for further analysis. 
 
 
@@ -36,7 +37,6 @@ dir.create("results")
 ## Step One: Input results from kallisto
 
 We use raw, non-normalised estimated counts.
-
 ```{r} 
 ## Set paths to folders containing output files from kallisto
 paths <- list()
@@ -132,7 +132,7 @@ deseq_txi <- DESeqDataSetFromTximport(txi     = txi_counts,
 #1) Running a likelihood ratio test - for DE comparison across all treatments
 #Make sure that all files for each condition of interest are read into the DESEq object:
 
-## Run liklihood-ratio test:
+## Run likelihood-ratio test:
 deseq_object_LRT <- DESeq(object = deseq_txi, test = "LRT", reduced = ~ 1)
 ```
 
@@ -255,8 +255,7 @@ plot_heatmap3 <- function(input){
                   margins = c(10,14), 
                   sepwidth = c(0.01, 0.01), 
                   sepcolor = "black", 
-                  colsep = 1:ncol(input),
-                  rowsep = 1:nrow(input),
+                  colsep = c(0,4,8,12),
                   cexRow = 1,
                   Colv = NULL,
                   labRow = rownames(input))
@@ -284,67 +283,8 @@ generate_pairwise_heatmap <- function(deseq_input, treatment_1, treatment_2, cou
 generate_pairwise_heatmap(deseq_object_LRT, "CON", "CLO", txi_counts_df) 
 ```
 
-### Step Five: Run DESeq2 (Wald test) for differential expression analysis:
 
-Which genes are differentially expressed between each treatment and control?
-Running a Wald t-test (default test within DESeq2)
-
-```{r}
-##======================================================================================
-## 5.1) Which genes are differentially expressed within clothianidin-exposed workers in comparison to control?
-##======================================================================================
-## Perform a pairwise comparison between treatments:
-deseq_object_pairwise  <- DESeq(deseq_txi, test = "Wald") #fit model to txi object 
-
-## Extract results for clothianidin vs. control:
-deseq_results_pairwise_CLO <- results(deseq_object_pairwise, contrast = c("treatment", "CON", "CLO")) #results of model
-
-## Save object for later use
-save(deseq_object_pairwise, file = "deseq_object_pairwise.Rdata")
-
-## lfcShrink(), which performs log2 fold change shrinkage for visualization and ranking of genes:
-deseq_results_pairwise_CLO_shrink <- lfcShrink(dds = deseq_object_pairwise, contrast = c("treatment", "CON", "CLO"), res = deseq_results_pairwise_CLO)
-
-# Results table ordered by smallest p value
-deseq_results_pairwise_CLO_ordered <- deseq_results_pairwise_CLO_shrink[order(deseq_results_pairwise_CLO_shrink$pvalue),]
-
-# No. genes p < 0.05
-deseq_results_pairwise_CLO_significant <- deseq_results_pairwise_CLO_ordered[which(deseq_results_pairwise_CLO_ordered$padj < 0.05), ]
-
-## Log fold changes in expression between clothianidin-exposed workers and control ###
-# Genes which are more highly expressed in CLO group, compared to control 
-deseq_pairwise_CLO_lfc_high <- deseq_results_pairwise_CLO_significant[which(deseq_results_pairwise_CLO_significant$log2FoldChange < 0),] # n = 21
-
-# Genes which are less expressed in CLO group, compared to control
-deseq_pairwise_CLO_lfc_low <- deseq_results_pairwise_CLO_significant[which(deseq_results_pairwise_CLO_significant$log2FoldChange > 0),] # n = 12
-
-# Save results object for use in heatmap
-de_genes_pairwise_CLO <- rownames(deseq_results_pairwise_CLO_significant)
-save(de_genes_pairwise_CLO, file = "de_genes_pairwise_CLO.Rdata")
-
-# Export gene names object into .txt file, for GO analysis genes of interest 
-write(de_genes_pairwise_CLO, "de_genes_pairwise_CLO.txt")
-```
-
-##=======================================================================================
-## 5.2 Which genes are differentially expressed within imidacloprid-exposed workers in comparison to control?
-##=======================================================================================
-
-```{r}
-## Perform a pairwise comparison between treatments
-deseq_results_pairwise_IMI <- results(deseq_object_pairwise, contrast = c("treatment", "CON", "IMI")) #results of model
-
-#lfcShrink(), which performs log2 fold change shrinkage for visualization and ranking of genes:
-deseq_results_pairwise_IMI_shrink <- lfcShrink(dds = deseq_object_pairwise, contrast = c("treatment", "CON", "IMI"), res = deseq_results_pairwise_IMI)
-
-# Results table ordered by smallest p value
-deseq_results_pairwise_IMI_ordered <- deseq_results_pairwise_IMI_shrink[order(deseq_results_pairwise_IMI_shrink$pvalue),]
-
-# No. genes p < 0.05
-deseq_results_pairwise_IMI_significant <- deseq_results_pairwise_IMI_ordered[which(deseq_results_pairwise_IMI_ordered$padj < 0.05), ] # n = 1
-```
-
-### Step Six: Principal Components Analysis
+### Step Five: Principal Components Analysis
 
 ```{r}
 ## Extracting transformed values from DESeq object:
