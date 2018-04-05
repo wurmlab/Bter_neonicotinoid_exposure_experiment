@@ -47,8 +47,7 @@ plot_heatmap3 <- function(input){
                   margins = c(10,14), 
                   sepwidth = c(0.01, 0.01), 
                   sepcolor = "black", 
-                  colsep = 1:ncol(input),
-                  rowsep = 1:nrow(input),
+                  colsep = c(0,4,8,12),
                   cexRow = 1,
                   Colv = NULL,
                   labRow = rownames(input))
