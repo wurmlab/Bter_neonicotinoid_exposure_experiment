@@ -3,7 +3,6 @@
 Gene ontology enrichment analysis performed using the R package, <a href="https://bioconductor.org/packages/release/bioc/html/topGO.html">topGO.</a>  
 
 ### Running the code:  
-##### Input files:  
 For running the code, two input files are required.   
 1. A <i>genelist</i> file.  
 The genelist file is a tab-delimited file containing two columns:
