@@ -1,0 +1,134 @@
+---
+title: "Bombus pesticide exposure: gene expression in head"
+output: GO_enrichment.html
+---
+
+# Introduction 
+This script is for Gene Ontology (GO) analysis of differentiallly expressed genes to explore the biological processes and molecular functions associated with DE genes, using the R package 'TopGO' (https://www.bioconductor.org/packages/3.7/bioc/vignettes/topGO/inst/doc/topGO.pdf).
+Input files should be a .txt file of 'genes of interest' generated from differential gene expression analysis, using the R package DESeq2 and a database of GO terms mapped to the genome of interest. 
+This script will prepare data for GO analysis and create a 'TopGO object' from which enrichment tests can be performed to explore GO terms significantly enriched within the dataset. 
+This script produces a results table of significantly enriched GO terms.
+
+```{r}
+# Load libraries; install from scratch if needed
+libraries <- c("topGO")
+for (lib in libraries) {
+    if (require(package = lib, character.only = TRUE)) {
+        print("Successful")
+    } else {
+        print("Installing")
+        source("https://bioconductor.org/biocLite.R")
+        biocLite(pkgs = lib)
+        library(lib, character.only = TRUE )
+    }
+}
+```
+
+## Step One: Input files and define objects for topGO
+
+We use two lists of significantly differentially expressed genes and an input database of GO terms.
+
+a) Differential gene expression across all three treatments
+```{r}
+## Define input file (eg. output of likelihood ratio or Wald test):
+## Input file should have named two columns:
+## Column One: 'locus' (e.g. LOCXXXX)
+## Column Two: 'pvalue'
+input <- "de_genes_for_topGO_LRT.txt" 
+
+# Set input files:
+genes_of_interest <- read.table(input, header = T)
+
+## Sort by adjusted p-value:
+genes_of_interest_sorted <- genes_of_interest[order(genes_of_interest$pvalue), ]
+
+## Remove na values:
+genes_of_interest_sorted_filtered <- genes_of_interest_sorted[!is.na(genes_of_interest_sorted$pvalue), ]
+
+# Read in GO annotations
+geneID2GO <- readMappings(file = "blast2go_mapping_20171223_1007.input_database_for_topGO.txt")
+
+# Define gene 'universe'
+gene_universe <- names(geneID2GO) 
+
+## Create genelist
+geneList <- genes_of_interest_sorted_filtered$pvalue
+names(geneList) <- genes_of_interest_sorted_filtered$locus
+
+# Define a cut-off:
+cutoff_for_top_fivepercent <- quantile(x = geneList, probs = 0.05)
+
+## An alternative is to state which genes are of interest:
+# Tell TOPGO where these interesting genes appear in gene universe vector
+#gene_list <- factor(as.integer(gene_universe %in% genes_of_interest))
+#names(gene_list) <- gene_universe
+```
+
+## Step Two: Create topGO data object, using BP for 'Biological Processes'
+We create a topGO object using GO terms associated with 'Biological Processes'
+
+```{r}
+## Variables to define - 
+## Biological process - 'BP' 
+## Molecular function - 'MF' 
+## Cellular component - 'CC'
+GO_term_type <- 'BP'
+
+## Build the GOdata object in topGO
+myGOdata <- new("topGOdata", 
+                description = "My project", 
+                ontology = GO_term_type, 
+                #geneSel = function(x) {return(x=TRUE)}, # Run just for ks test
+                geneSel = function(x) {return(x < cutoff_for_top_fivepercent_LRT)}, # only used for fisher test
+                allGenes = geneList,  
+                gene2GO = geneID2GO, 
+                annot = annFUN.gene2GO, 
+                nodeSize=10) # NodeSize can be reduced or increased to reduce/increase stringency. 
+```
+
+## Step Three: Run statistical tests for GO term enrichment
+We perform three statistical tests:
+1. A ks test using the topGO 'weight01' algorithm
+2. A Fisher test using the topGO 'weight01' algoritm
+
+We combine the output of each test. 
+We filter out enriched terms.
+
+a) For all three treatments
+```{r}
+## Calculate ks test using 'weight01' algorithm:
+resultWeightKs <- runTest(myGOdata, 
+                          algorithm = "weight01", 
+                          statistic = "ks")
+
+## Calculate fisher exact test using 'weight01' algorithm:
+resultWeightFisher <- runTest(myGOdata, 
+                              algorithm = "weight01", 
+                              statistic = "fisher")
+
+## Combine results from statistical tests:
+allRes <- GenTable(myGOdata, 
+                   weight = resultWeightKs, 
+                   weightfisher = resultWeightFisher,
+                   orderBy = "weight", 
+                   topNodes = 2038) ## This number should be altered based on the ontology type examined.
+                                    ## If number is too high, the console will complain and print out the actual
+                                    ## number of nodes allowed to examine.
+                                    ## If number is too low, it won't complain but you want to make sure you are using
+                                    ## all of the nodes. In this scenario, increase the number of topNodes value until
+                                    ## you get a complaint and then use the number printed to console. 
+
+# Filter out calls with significance higher than expected:
+allRes_sig <- allRes[which(allRes$Significant > allRes$Expected &
+                           allRes$weight < 0.05 &
+                           allRes$weightfisher < 0.05), ]
+
+## Print to console one of the GO terms of interest to check the distribution of that GO term across ranked genes:
+print(showGroupDensity(myGOdata_3_treatments, 
+                       "GO:0044707", 
+                       ranks = TRUE, 
+                       rm.one = FALSE))
+
+## Write to output:
+write.table(allRes_sig, file = "allRes_sig_GO_results.txt", row.names = TRUE, sep = "\t")
+```
