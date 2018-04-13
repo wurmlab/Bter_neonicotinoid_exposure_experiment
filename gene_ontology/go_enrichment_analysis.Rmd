@@ -22,7 +22,7 @@ This script outputs a results table of significantly enriched GO terms.
 
 ```{r}
 # Load libraries; install from scratch if needed
-libraries <- c("topGO")
+libraries <- c("topGO", "lintr")
 for (lib in libraries) {
     if (require(package = lib, character.only = TRUE)) {
         print("Successful")
