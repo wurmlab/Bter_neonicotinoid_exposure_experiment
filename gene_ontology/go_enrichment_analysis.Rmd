@@ -87,14 +87,14 @@ myGOdata <- new("topGOdata",
 ```
 
 ## Step Three: Run statistical tests for GO term enrichment
-We perform three statistical tests:
+We perform two statistical tests:
 1. A ks test using the topGO 'weight01' algorithm
 2. A Fisher test using the topGO 'weight01' algoritm
 
 We combine the output of each test. 
 We filter out enriched terms.
 
-a) For all three treatments
+a) For all three GO categories (ie. BP, MF, CC):
 ```{r}
 ## Calculate ks test using 'weight01' algorithm:
 resultWeightKs <- runTest(myGOdata, 
