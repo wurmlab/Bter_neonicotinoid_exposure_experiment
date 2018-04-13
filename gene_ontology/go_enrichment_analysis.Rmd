@@ -47,7 +47,7 @@ Load in genelist and database files.
 gene_to_go_mapping_file <- "input/blast2go_mapping_20171223_1007.input_database_for_topGO.txt"
 
 ## file of significant genes (2 column file: i.e. gene id and pvalue) file:
-de_genes_file <- "de_genes_for_topGO.txt"
+de_genes_file <- "input/de_genes_for_topGO.txt"
 
 output_directory <- "output"
 if (file.exists(output_directory)) { 
