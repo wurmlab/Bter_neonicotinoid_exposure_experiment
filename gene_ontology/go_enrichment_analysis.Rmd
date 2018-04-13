@@ -28,7 +28,7 @@ for (lib in libraries) {
 
 We use two lists of significantly differentially expressed genes and an input database of GO terms.
 
-a) Differential gene expression across all three treatments
+a) Differential gene expression between two treatments:
 ```{r}
 ## Define input file (eg. output of likelihood ratio or Wald test):
 ## Input file should have named two columns:
