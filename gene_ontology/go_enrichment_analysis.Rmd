@@ -40,9 +40,8 @@ Load in genelist and database files.
 
 ```{r}
 ## Define input (i.e. genelist) file:
-input <- "de_genes_for_topGO_CLO.txt"
+input <- "de_genes_for_topGO.txt"
 
-treatment <- "CLO"
 output_directory <- "output"
 if file.exists(output_directory) { 
   stop("The output directory:", output_directory, ", already exists", 
@@ -93,6 +92,7 @@ We do this for each of the three GO categories (ie. Biological process, Molcular
 
 ```{r}
 for (go_category in c("BP", "MF", "CC") {
+  # STEP TWO
   ## Build the GOdata object in topGO
   my_go_data <- new("topGOdata",
                     description = paste("GOtest", go_category, sep="_"),
@@ -105,6 +105,7 @@ for (go_category in c("BP", "MF", "CC") {
                     annot       = annFUN.gene2GO,
                     nodeSize    = 100) # Modify to reduce/increase stringency.
   
+  # STEP THREE
   ## Calculate ks test using 'weight01' algorithm:
   result_weight_ks <- runTest(object    = my_go_data,
                               algorithm = "weight01",
@@ -135,7 +136,7 @@ for (go_category in c("BP", "MF", "CC") {
   ## Write to output:
   write.table(x         = result_weight_output_sig,
               file      = file.path(output_directory,
-                                    paste(treatment, go_category, "sig.tsv", sep="_"))
+                                    paste(go_category, "sig.tsv", sep="_"))
               row.names = TRUE,
               sep       = "\t")
 }
