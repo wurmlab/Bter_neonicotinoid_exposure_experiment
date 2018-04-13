@@ -7,15 +7,15 @@ output: GO_enrichment.html
 This script is for gene ontology (GO) enrichment analysis of differentiallly expressed genes to explore the biological processes and molecular functions associated with DE genes, using the R package 'TopGO' (https://www.bioconductor.org/packages/3.7/bioc/vignettes/topGO/inst/doc/topGO.pdf).
 Twp input files are required for the running of the test:  
 1) A genelist file:  
-The genelist file is a tab-delimited file containing two columns:
-Column 1: Locus (contains gene or transcript name of interest).
-Column 2: Rank value of interest (e.g. p-values or log fold changes).
-Rank values were generated using the R package, DESeq2, and implemented using code in ```gene_level_3_treatments.Rmd```.
+The genelist file is a tab-delimited file containing two columns:  
+Column 1: Locus (contains gene or transcript name of interest).  
+Column 2: Rank value of interest (e.g. p-values or log fold changes).  
+Rank values were generated using the R package, DESeq2, and implemented using code in ```gene_level_3_treatments.Rmd```.  
 
 2) A GO database file.
-The GO database file is a tab-delimited file containing two columns:
-Column 1: Locus (contains gene or transcript name of interest).
-Column 2: Comma separated GO terms (e.g. GO:0000001, GO:0000002, etc.).
+The GO database file is a tab-delimited file containing two columns:  
+Column 1: Locus (contains gene or transcript name of interest).  
+Column 2: Comma separated GO terms (e.g. GO:0000001, GO:0000002, etc.).  
 
 This script will prepare data for GO analysis and create a 'TopGO object' from which enrichment tests can be performed to explore GO terms significantly enriched within the dataset. 
 This script outputs a results table of significantly enriched GO terms.
