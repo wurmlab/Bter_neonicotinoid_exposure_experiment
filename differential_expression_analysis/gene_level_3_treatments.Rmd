@@ -136,8 +136,8 @@ deseq_object  <- DESeq(deseq_txi, test = "Wald")
 ## Extract results for clothianidin vs. control:
 deseq_results_CLO <- results(deseq_object, contrast = c("treatment", "CON", "CLO"))
 
-## Save object for later use
-save(deseq_object, file = "results/differential_expression/deseq_object.Rdata")                                                # ////////////// DO WE NEED THIS OBJECT? ///////////
+## Save object for use in generating heatmap(s)
+save(deseq_object, file = "results/differential_expression/deseq_object.Rdata")                                               
 
 ## lfcShrink(), which performs log2 fold change shrinkage for visualization and ranking of genes:
 deseq_results_CLO <- lfcShrink(dds = deseq_object, contrast = c("treatment", "CON", "CLO"), res = deseq_results_CLO)
@@ -157,12 +157,6 @@ deseq_pairwise_CLO_lfc_high <- deseq_results_CLO_significant[which(deseq_results
 # Identify genes less expressed in CLO group 
 deseq_pairwise_CLO_lfc_low <- deseq_results_CLO_significant[which(deseq_results_CLO_significant$log2FoldChange > 0),] # n = 12
 
-# Save results object for use in heatmap
-de_genes_CLO <- rownames(deseq_results_CLO_significant)                                                                        # ////////////// DO WE NEED THESE OBJECTS? ///////////
-save(de_genes_CLO , file = "results/differential_expression/de_genes_pairwise_CLO.Rdata")
-
-# Export gene names object into .txt file, for GO analysis genes of interest 
-write(de_genes_CLO, "results/differential_expression/de_genes_pairwise_CLO.txt")                                               # ////////////// DO WE NEED THIS OBJECT? ///////////
 ```
 
 ```{r}
@@ -214,10 +208,14 @@ de_genes_for_topGO_CLO <- data.frame(locus           = row.names(deseq_results_C
 # ii) For imidacloprid
 de_genes_for_topGO_IMI <- data.frame(locus           = row.names(deseq_results_IMI), 
                                      adjusted_pvalue = deseq_results_IMI$padj)
+# Order by p-values 
+de_genes_for_topGO_CLO <- de_genes_for_topGO_CLO[order(de_genes_for_topGO_CLO$adjusted_pvalue),]
+de_genes_for_topGO_IMI <- de_genes_for_topGO_IMI[order(de_genes_for_topGO_IMI$adjusted_pvalue),]
+
 
 ## Write to output:
-write.table(de_genes_for_topGO_CLO, file = "results/differential_expression/de_genes_for_topGO.txt", row.names = FALSE, sep = "\t")
-write.table(de_genes_for_topGO_IMI, file = "results/differential_expression/de_genes_for_topGO.txt", row.names = FALSE, sep = "\t")
+write.table(de_genes_for_topGO_CLO, file = "results/differential_expression/de_genes_for_topGO_CLO.txt", row.names = FALSE, sep = "\t")
+write.table(de_genes_for_topGO_IMI, file = "results/differential_expression/de_genes_for_topGO_IMI.txt", row.names = FALSE, sep = "\t")
 ```
 
 ### Step Six: Principal Components Analysis
