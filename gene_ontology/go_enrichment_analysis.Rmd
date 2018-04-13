@@ -12,7 +12,7 @@ Column 1: Locus (contains gene or transcript name of interest).
 Column 2: Rank value of interest (e.g. p-values or log fold changes).  
 Rank values were generated using the R package, DESeq2, and implemented using code in ```gene_level_3_treatments.Rmd```.  
 
-2) A GO database file.
+2) A GO database file:  
 The GO database file is a tab-delimited file containing two columns:  
 Column 1: Locus (contains gene or transcript name of interest).  
 Column 2: Comma separated GO terms (e.g. GO:0000001, GO:0000002, etc.).  
@@ -35,12 +35,15 @@ for (lib in libraries) {
 }
 ```
 
-## Step One: Input files and define objects for running topGO: 
+## Step One: Input files, define output and objects for running topGO: 
 Load in genelist and database files.  
 
 ```{r}
 ## Define input (i.e. genelist) file:
 input <- "de_genes_for_topGO_LRT.txt" 
+
+## Define output file name:  
+output <- ""
 
 ## Read in input file:
 genes_of_interest <- read.table(input, header = TRUE)
@@ -54,33 +57,33 @@ genes_of_interest_sorted <- genes_of_interest[order(genes_of_interest$pvalue), ]
 genes_of_interest_sorted_filtered <- subset(genes_of_interest_sorted, subset = !is.na(pvalue))
 
 ## Read in GO annotations:  
-geneID2GO <- readMappings(file = "input/blast2go_mapping_20171223_1007.input_database_for_topGO.txt")
+gene_id2gO <- readMappings(file = "input/blast2go_mapping_20171223_1007.input_database_for_topGO.txt")
 
 ## Define gene 'universe':  
-gene_universe <- names(geneID2GO) 
+gene_universe <- names(gene_id2gO) 
 
 ## Create ranked and filtered genelist (i.e genes of interest):  
-geneList        <- genes_of_interest_sorted_filtered$pvalue
-names(geneList) <- genes_of_interest_sorted_filtered$locus
+genelist        <- genes_of_interest_sorted_filtered$pvalue
+names(genelist) <- genes_of_interest_sorted_filtered$locus
 
 # Define a cut-off for running fisher's exact test:  
-cutoff_for_top_fivepercent <- quantile(x = geneList, probs = 0.05)
+cutoff_for_top_fivepercent <- quantile(x = genelist, probs = 0.05)
 ```
 
-## Step Two: Create topGO data object, using BP for 'Biological Processes'
-We create a topGO object using GO terms associated with 'Biological Processes'
+## Step Two: Create topGO data object:  
+We create a topGO object for each GO term
 
 ```{r}
 ## Variables to define - 
 ## Biological process - 'BP' 
 ## Molecular function - 'MF' 
 ## Cellular component - 'CC'
-GO_term_type <- 'BP'
+go_term_type <- 'BP'
 
 ## Build the GOdata object in topGO
-myGOdata <- new("topGOdata", 
+my_go_data <- new(object="topGOdata", 
                 description = "My project", 
-                ontology = GO_term_type,
+                ontology = go_term_type,
                 ## To use all genes for statistical tests with no predefined genes of interest:
                 #geneSel = function(x) {return(x=TRUE)}, # Run just for ks test
                 ## To create a subset of genes of interest: 
@@ -102,38 +105,32 @@ We filter out enriched terms.
 a) For all three GO categories (ie. BP, MF, CC):
 ```{r}
 ## Calculate ks test using 'weight01' algorithm:
-resultWeightKs <- runTest(myGOdata, 
+result_weight_ks <- runTest(my_go_data, 
                           algorithm = "weight01", 
                           statistic = "ks")
 
 ## Calculate fisher exact test using 'weight01' algorithm:
-resultWeightFisher <- runTest(myGOdata, 
+result_weight_fisher <- runTest(my_go_data, 
                               algorithm = "weight01", 
                               statistic = "fisher")
 
 ## Combine results from statistical tests:
-allRes <- GenTable(myGOdata, 
-                   weight = resultWeightKs, 
-                   weightfisher = resultWeightFisher,
-                   orderBy = "weight", 
-                   topNodes = 2038) ## This number should be altered based on the ontology type examined.
-                                    ## If number is too high, the console will complain and print out the actual
-                                    ## number of nodes allowed to examine.
-                                    ## If number is too low, it won't complain but you want to make sure you are using
-                                    ## all of the nodes. In this scenario, increase the number of topNodes value until
-                                    ## you get a complaint and then use the number printed to console. 
+result_weight_output <- GenTable(object=myGOdata, 
+                                 weight_ks = result_weight_ks, 
+                                 weight_fisher = result_weight_fisher,
+                                 orderBy = "weight", 
+                                 topNodes = length(score(weight_ks)))
 
-## Filter out calls with significance higher than expected:
-allRes_sig <- allRes[which(allRes$Significant > allRes$Expected &
-                           allRes$weight < 0.05 &
-                           allRes$weightfisher < 0.05), ]
+## Subset calls with significance higher than expected:
+result_weight_output_sig <- subset(combined_results, Significant > Expected &
+                                   weight_ks < 0.05)
 
 ## Print to console one of the GO terms of interest to check the distribution of that GO term across ranked genes:
-print(showGroupDensity(myGOdata_3_treatments, 
-                       "GO:0044707", 
+print(showGroupDensity(my_go_data, 
+                       head(result_weight_output_sig$, n=1), 
                        ranks = TRUE, 
                        rm.one = FALSE))
 
 ## Write to output:
-write.table(allRes_sig, file = "allRes_sig_GO_results.txt", row.names = TRUE, sep = "\t")
+write.table(result_weight_output_sig, file = output, row.names = TRUE, sep = "\t")
 ```
