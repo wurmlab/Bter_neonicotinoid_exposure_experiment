@@ -42,8 +42,14 @@ Load in genelist and database files.
 ## Define input (i.e. genelist) file:
 input <- "de_genes_for_topGO_CLO.txt"
 
-## Define output file name:  
-output <- "de_genes_for_topGO_CLO_sig_terms.txt"
+treatment <- "CLO"
+output_directory <- "output"
+if file.exists(output_directory) { 
+  stop("The output directory:", output_directory, ", already exists", 
+       "Let's avoid overwriting")
+} else {
+  dir.create(output_directory) 
+}
 
 ## Read in input file:
 genes_interest <- read.table(input, header = TRUE)
@@ -71,30 +77,9 @@ names(genelist) <- genes_of_interest_sorted_filtered$locus
 cutoff_for_top_fivepercent <- quantile(x = genelist, probs = 0.05)
 ```
 
-## Step Two: Create topGO data object:  
+## Steps Two and Three: Create topGO Object & run tests for GO term enrichment
+
 We create a topGO object for each GO term
-
-```{r}
-## Variables to define - 
-## Biological process - 'BP' 
-## Molecular function - 'MF' 
-## Cellular component - 'CC'
-go_term_type <- "BP"
-
-## Build the GOdata object in topGO
-my_go_data <- new("topGOdata",
-                  description = "My project",
-                  ontology    = go_term_type,
-                  geneSel     = function(x) { # fails to run without this
-                                   return(x < cutoff_for_top_fivepercent)
-                                 },
-                  allGenes    = genelist,
-                  gene2GO     = gene_id2go,
-                  annot       = annFUN.gene2GO,
-                  nodeSize    = 100) # Modify to reduce/increase stringency.
-```
-
-## Step Three: Run statistical tests for GO term enrichment
 
 We perform two statistical tests:
 1. A ks test using the topGO 'weight01' algorithm
@@ -103,39 +88,55 @@ We perform two statistical tests:
 We combine the output of each test. 
 We filter out enriched terms.
 
-a) For all three GO categories (ie. BP, MF, CC):
+We do this for each of the three GO categories (ie. Biological process, Molcular Function, Cellular Component):
+
 
 ```{r}
-## Calculate ks test using 'weight01' algorithm:
-result_weight_ks <- runTest(object    = my_go_data,
-                            algorithm = "weight01",
-                            statistic = "ks")
-
-## Calculate fisher exact test using 'weight01' algorithm:
-result_weight_fisher <- runTest(object    = my_go_data,
-                                algorithm = "weight01",
-                                statistic = "fisher")
-
-## Combine results from statistical tests:
-result_weight_output <- GenTable(object       = my_go_data,
-                                 weight_ks     = result_weight_ks,
-                                 weight_fisher = result_weight_fisher,
-                                 orderBy       = "weight_ks",
-                                 topNodes      = length(score(result_weight_ks)))
-
-## Subset calls with significance higher than expected:
-result_weight_output_sig <- subset(x      = result_weight_output, 
-                                   subset = (Significant > Expected) & (weight_ks < 0.05))
-
-## Print to console one of the GO terms of interest to check the distribution of that GO term across ranked genes:
-print(showGroupDensity(object  = my_go_data,
-                       whichGO = head(result_weight_output_sig$GO.ID, n = 1),
-                       ranks   = TRUE,
-                       rm.one  = FALSE))
-
-## Write to output:
-write.table(x         = result_weight_output_sig,
-            file      = output,
-            row.names = TRUE,
-            sep       = "\t")
+for (go_category in c("BP", "MF", "CC") {
+  ## Build the GOdata object in topGO
+  my_go_data <- new("topGOdata",
+                    description = paste("GOtest", go_category, sep="_"),
+                    ontology    = go_category,
+                    geneSel     = function(x) { # fails to run without this
+                                     return(x < cutoff_for_top_fivepercent)
+                                   },
+                    allGenes    = genelist,
+                    gene2GO     = gene_id2go,
+                    annot       = annFUN.gene2GO,
+                    nodeSize    = 100) # Modify to reduce/increase stringency.
+  
+  ## Calculate ks test using 'weight01' algorithm:
+  result_weight_ks <- runTest(object    = my_go_data,
+                              algorithm = "weight01",
+                              statistic = "ks")
+  
+  ## Calculate fisher exact test using 'weight01' algorithm:
+  result_weight_fisher <- runTest(object    = my_go_data,
+                                  algorithm = "weight01",
+                                  statistic = "fisher")
+  
+  ## Combine results from statistical tests:
+  result_weight_output <- GenTable(object       = my_go_data,
+                                   weight_ks     = result_weight_ks,
+                                   weight_fisher = result_weight_fisher,
+                                   orderBy       = "weight_ks",
+                                   topNodes      = length(score(result_weight_ks)))
+  
+  ## Subset calls with significance higher than expected:
+  result_weight_output_sig <- subset(x      = result_weight_output, 
+                                     subset = (Significant > Expected) & (weight_ks < 0.05))
+  
+  ## Print to console one of the GO terms of interest to check the distribution of that GO term across ranked genes:
+  print(showGroupDensity(object  = my_go_data,
+                         whichGO = head(result_weight_output_sig$GO.ID, n = 1),
+                         ranks   = TRUE,
+                         rm.one  = FALSE))
+  
+  ## Write to output:
+  write.table(x         = result_weight_output_sig,
+              file      = file.path(output_directory,
+                                    paste(treatment, go_category, "sig.tsv", sep="_"))
+              row.names = TRUE,
+              sep       = "\t")
+}
 ```
