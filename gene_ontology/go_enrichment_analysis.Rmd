@@ -4,10 +4,21 @@ output: GO_enrichment.html
 ---
 
 # Introduction 
-This script is for Gene Ontology (GO) analysis of differentiallly expressed genes to explore the biological processes and molecular functions associated with DE genes, using the R package 'TopGO' (https://www.bioconductor.org/packages/3.7/bioc/vignettes/topGO/inst/doc/topGO.pdf).
-Input files should be a .txt file of 'genes of interest' generated from differential gene expression analysis, using the R package DESeq2 and a database of GO terms mapped to the genome of interest. 
+This script is for gene ontology (GO) enrichment analysis of differentiallly expressed genes to explore the biological processes and molecular functions associated with DE genes, using the R package 'TopGO' (https://www.bioconductor.org/packages/3.7/bioc/vignettes/topGO/inst/doc/topGO.pdf).
+Twp input files are required for the running of the test:  
+1) A genelist file:  
+The genelist file is a tab-delimited file containing two columns:
+Column 1: Locus (contains gene or transcript name of interest).
+Column 2: Rank value of interest (e.g. p-values or log fold changes).
+Rank values were generated using the R package, DESeq2, and implemented using code in ```gene_level_3_treatments.Rmd```.
+
+2) A GO database file.
+The GO database file is a tab-delimited file containing two columns:
+Column 1: Locus (contains gene or transcript name of interest).
+Column 2: Comma separated GO terms (e.g. GO:0000001, GO:0000002, etc.).
+
 This script will prepare data for GO analysis and create a 'TopGO object' from which enrichment tests can be performed to explore GO terms significantly enriched within the dataset. 
-This script produces a results table of significantly enriched GO terms.
+This script outputs a results table of significantly enriched GO terms.
 
 ```{r}
 # Load libraries; install from scratch if needed
@@ -24,42 +35,39 @@ for (lib in libraries) {
 }
 ```
 
-## Step One: Input files and define objects for topGO
+## Step One: Input files and define objects for running topGO: 
+Load in genelist and database files.  
 
-We use two lists of significantly differentially expressed genes and an input database of GO terms.
-
-a) Differential gene expression between two treatments:
 ```{r}
-## Define input file (eg. output of likelihood ratio or Wald test):
-## Input file should have named two columns:
-## Column One: 'locus' (e.g. LOCXXXX)
-## Column Two: 'pvalue'
+## Define input (i.e. genelist) file:
 input <- "de_genes_for_topGO_LRT.txt" 
 
-# Set input files:
+## Read in input file:
 genes_of_interest <- read.table(input, header = T)
 
 ## Sort by adjusted p-value:
+## N.B. KS test requires ranked values - this step is to ensure values are ranked:  
 genes_of_interest_sorted <- genes_of_interest[order(genes_of_interest$pvalue), ]
 
 ## Remove na values:
+## I need to check this but there appeared to be 'NA' values in the last DE output I used:  
 genes_of_interest_sorted_filtered <- genes_of_interest_sorted[!is.na(genes_of_interest_sorted$pvalue), ]
 
-# Read in GO annotations
+## Read in GO annotations:  
 geneID2GO <- readMappings(file = "blast2go_mapping_20171223_1007.input_database_for_topGO.txt")
 
-# Define gene 'universe'
+## Define gene 'universe':  
 gene_universe <- names(geneID2GO) 
 
-## Create genelist
+## Create ranked and filtered genelist (i.e genes of interest):  
 geneList <- genes_of_interest_sorted_filtered$pvalue
 names(geneList) <- genes_of_interest_sorted_filtered$locus
 
-# Define a cut-off:
+# Define a cut-off for running fisher's exact test:  
 cutoff_for_top_fivepercent <- quantile(x = geneList, probs = 0.05)
 
 ## An alternative is to state which genes are of interest:
-# Tell TOPGO where these interesting genes appear in gene universe vector
+## Tell topGO where these interesting genes appear in gene universe vector
 #gene_list <- factor(as.integer(gene_universe %in% genes_of_interest))
 #names(gene_list) <- gene_universe
 ```
@@ -77,9 +85,11 @@ GO_term_type <- 'BP'
 ## Build the GOdata object in topGO
 myGOdata <- new("topGOdata", 
                 description = "My project", 
-                ontology = GO_term_type, 
+                ontology = GO_term_type,
+                ## To use all genes for statistical tests with no predefined genes of interest:
                 #geneSel = function(x) {return(x=TRUE)}, # Run just for ks test
-                geneSel = function(x) {return(x < cutoff_for_top_fivepercent_LRT)}, # only used for fisher test
+                ## To create a subset of genes of interest: 
+                geneSel = function(x) {return(x < cutoff_for_top_fivepercent)},
                 allGenes = geneList,  
                 gene2GO = geneID2GO, 
                 annot = annFUN.gene2GO, 
@@ -89,7 +99,7 @@ myGOdata <- new("topGOdata",
 ## Step Three: Run statistical tests for GO term enrichment
 We perform two statistical tests:
 1. A ks test using the topGO 'weight01' algorithm
-2. A Fisher test using the topGO 'weight01' algoritm
+2. A Fisher's exact test using the topGO 'weight01' algoritm
 
 We combine the output of each test. 
 We filter out enriched terms.
@@ -118,7 +128,7 @@ allRes <- GenTable(myGOdata,
                                     ## all of the nodes. In this scenario, increase the number of topNodes value until
                                     ## you get a complaint and then use the number printed to console. 
 
-# Filter out calls with significance higher than expected:
+## Filter out calls with significance higher than expected:
 allRes_sig <- allRes[which(allRes$Significant > allRes$Expected &
                            allRes$weight < 0.05 &
                            allRes$weightfisher < 0.05), ]
