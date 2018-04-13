@@ -40,30 +40,30 @@ Load in genelist and database files.
 
 ```{r}
 ## Define input (i.e. genelist) file:
-input <- "de_genes_for_topGO_LRT.txt" 
+input <- "de_genes_for_topGO_CLO.txt" 
 
 ## Define output file name:  
-output <- ""
+output <- "de_genes_for_topGO_CLO_sig_terms.txt"
 
 ## Read in input file:
 genes_of_interest <- read.table(input, header = TRUE)
 
 ## Sort by adjusted p-value:
 ## N.B. KS test requires ranked values - this step is to ensure values are ranked:  
-genes_of_interest_sorted <- genes_of_interest[order(genes_of_interest$pvalue), ]
+genes_of_interest_sorted <- genes_of_interest[order(genes_of_interest$adjusted_pvalue), ]
 
 ## Remove na values:
-## I need to check this but there appeared to be 'NA' values in the last DE output I used:  
-genes_of_interest_sorted_filtered <- subset(genes_of_interest_sorted, subset = !is.na(pvalue))
+## NA values are present for certain genes without expression, such as tRNAs:
+genes_of_interest_sorted_filtered <- subset(genes_of_interest_sorted, subset = !is.na(adjusted_pvalue))
 
 ## Read in GO annotations:  
-gene_id2gO <- readMappings(file = "input/blast2go_mapping_20171223_1007.input_database_for_topGO.txt")
+gene_id2go <- readMappings(file = "input/blast2go_mapping_20171223_1007.input_database_for_topGO.txt")
 
 ## Define gene 'universe':  
-gene_universe <- names(gene_id2gO) 
+gene_universe <- names(gene_id2go) 
 
 ## Create ranked and filtered genelist (i.e genes of interest):  
-genelist        <- genes_of_interest_sorted_filtered$pvalue
+genelist        <- genes_of_interest_sorted_filtered$adjusted_pvalue
 names(genelist) <- genes_of_interest_sorted_filtered$locus
 
 # Define a cut-off for running fisher's exact test:  
@@ -81,20 +81,21 @@ We create a topGO object for each GO term
 go_term_type <- 'BP'
 
 ## Build the GOdata object in topGO
-my_go_data <- new(object="topGOdata", 
+my_go_data <- new("topGOdata", 
                 description = "My project", 
                 ontology = go_term_type,
                 ## To use all genes for statistical tests with no predefined genes of interest:
                 #geneSel = function(x) {return(x=TRUE)}, # Run just for ks test
                 ## To create a subset of genes of interest: 
                 geneSel = function(x) {return(x < cutoff_for_top_fivepercent)},
-                allGenes = geneList,  
-                gene2GO = geneID2GO, 
+                allGenes = genelist,  
+                gene2GO = gene_id2go, 
                 annot = annFUN.gene2GO, 
-                nodeSize=10) # NodeSize can be reduced or increased to reduce/increase stringency. 
+                nodeSize=100) # NodeSize can be reduced or increased to reduce/increase stringency. 
 ```
 
 ## Step Three: Run statistical tests for GO term enrichment
+
 We perform two statistical tests:
 1. A ks test using the topGO 'weight01' algorithm
 2. A Fisher's exact test using the topGO 'weight01' algoritm
@@ -103,6 +104,7 @@ We combine the output of each test.
 We filter out enriched terms.
 
 a) For all three GO categories (ie. BP, MF, CC):
+
 ```{r}
 ## Calculate ks test using 'weight01' algorithm:
 result_weight_ks <- runTest(my_go_data, 
@@ -115,19 +117,19 @@ result_weight_fisher <- runTest(my_go_data,
                               statistic = "fisher")
 
 ## Combine results from statistical tests:
-result_weight_output <- GenTable(object=myGOdata, 
+result_weight_output <- GenTable(object=my_go_data, 
                                  weight_ks = result_weight_ks, 
                                  weight_fisher = result_weight_fisher,
-                                 orderBy = "weight", 
-                                 topNodes = length(score(weight_ks)))
+                                 orderBy = "weight_ks", 
+                                 topNodes = length(score(result_weight_ks)))
 
 ## Subset calls with significance higher than expected:
-result_weight_output_sig <- subset(combined_results, Significant > Expected &
+result_weight_output_sig <- subset(result_weight_output, Significant > Expected &
                                    weight_ks < 0.05)
 
 ## Print to console one of the GO terms of interest to check the distribution of that GO term across ranked genes:
 print(showGroupDensity(my_go_data, 
-                       head(result_weight_output_sig$, n=1), 
+                       head(result_weight_output_sig$GO.ID, n=1), 
                        ranks = TRUE, 
                        rm.one = FALSE))
 
