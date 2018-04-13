@@ -43,7 +43,7 @@ Load in genelist and database files.
 input <- "de_genes_for_topGO_LRT.txt" 
 
 ## Read in input file:
-genes_of_interest <- read.table(input, header = T)
+genes_of_interest <- read.table(input, header = TRUE)
 
 ## Sort by adjusted p-value:
 ## N.B. KS test requires ranked values - this step is to ensure values are ranked:  
@@ -51,25 +51,20 @@ genes_of_interest_sorted <- genes_of_interest[order(genes_of_interest$pvalue), ]
 
 ## Remove na values:
 ## I need to check this but there appeared to be 'NA' values in the last DE output I used:  
-genes_of_interest_sorted_filtered <- genes_of_interest_sorted[!is.na(genes_of_interest_sorted$pvalue), ]
+genes_of_interest_sorted_filtered <- subset(genes_of_interest_sorted, subset = !is.na(pvalue))
 
 ## Read in GO annotations:  
-geneID2GO <- readMappings(file = "blast2go_mapping_20171223_1007.input_database_for_topGO.txt")
+geneID2GO <- readMappings(file = "input/blast2go_mapping_20171223_1007.input_database_for_topGO.txt")
 
 ## Define gene 'universe':  
 gene_universe <- names(geneID2GO) 
 
 ## Create ranked and filtered genelist (i.e genes of interest):  
-geneList <- genes_of_interest_sorted_filtered$pvalue
+geneList        <- genes_of_interest_sorted_filtered$pvalue
 names(geneList) <- genes_of_interest_sorted_filtered$locus
 
 # Define a cut-off for running fisher's exact test:  
 cutoff_for_top_fivepercent <- quantile(x = geneList, probs = 0.05)
-
-## An alternative is to state which genes are of interest:
-## Tell topGO where these interesting genes appear in gene universe vector
-#gene_list <- factor(as.integer(gene_universe %in% genes_of_interest))
-#names(gene_list) <- gene_universe
 ```
 
 ## Step Two: Create topGO data object, using BP for 'Biological Processes'
