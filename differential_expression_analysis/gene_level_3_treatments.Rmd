@@ -148,6 +148,11 @@ deseq_results_CLO_ordered <- deseq_results_CLO[order(deseq_results_CLO$pvalue),]
 # No. genes p < 0.05
 deseq_results_CLO_significant <- deseq_results_CLO_ordered[which(deseq_results_CLO_ordered$padj < 0.05), ]
 
+# Save significant genes for heatmap input 
+de_genes_CLO <- rownames(deseq_results_CLO_significant)
+
+save(de_genes_CLO, file = "input/graphical_representation/de_genes_CLO.RData")
+
 ##-----------------------------------------------------------------------------------------------------------------
 ## 4.1.1) How many and which genes are more/less expressed in clothianidin-exposed workers in comparison to control?
 ##-----------------------------------------------------------------------------------------------------------------
@@ -174,6 +179,12 @@ deseq_results_IMI_ordered <- deseq_results_IMI[order(deseq_results_IMI$pvalue),]
 
 # No. genes p < 0.05
 deseq_results_IMI_significant <- deseq_results_IMI_ordered[which(deseq_results_IMI_ordered$padj < 0.05), ] # n = 1
+
+# Save significant genes for heatmap input 
+de_genes_IMI <- rownames(deseq_results_IMI_significant)
+
+save(de_genes_IMI, file = "input/graphical_representation/de_genes_IMI.RData")
+
 ```
 
 ```{r}
@@ -214,8 +225,8 @@ de_genes_for_topGO_IMI <- de_genes_for_topGO_IMI[order(de_genes_for_topGO_IMI$ad
 
 
 ## Write to output:
-write.table(de_genes_for_topGO_CLO, file = "results/differential_expression/de_genes_for_topGO_CLO.txt", row.names = FALSE, sep = "\t")
-write.table(de_genes_for_topGO_IMI, file = "results/differential_expression/de_genes_for_topGO_IMI.txt", row.names = FALSE, sep = "\t")
+write.table(de_genes_for_topGO_CLO, file = "input/gene_ontology/wald_clo/de_genes_for_topGO.txt", row.names = FALSE, sep = "\t")
+write.table(de_genes_for_topGO_IMI, file = "input/gene_ontology/wald_imi/de_genes_for_topGO.txt", row.names = FALSE, sep = "\t")
 ```
 
 ### Step Six: Principal Components Analysis
