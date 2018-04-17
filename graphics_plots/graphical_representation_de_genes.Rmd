@@ -1,0 +1,123 @@
+--- 
+title: "Graphical representation of DE genes"
+output: 2018-02-28-graphics.nb.html
+--- 
+---
+
+## Introduction:
+#=================
+##This script is for exploratory analysis of transcript quantification data and results of differential gene expression analysis.
+##Input files should be R objects saved and generated from previous scripts of DE analysis, including the object resulting from using tximport() on kallisto files, the significant transcript abundances selected from this object and a results table of significant genes, generated using DESeq2. 
+##This script will organise input data for generating heatmaps of significantly differentially expressed genes, based on statistical significance and log fold changes in expression.
+##This script produces heatmaps that can be exported. 
+
+```{r}
+# Load libraries; install from scratch if needed
+libraries <- c("ggplot2", "gplots", "heatmap3", "ggfortify", "ggDESeq")
+for (lib in libraries) {
+    if (require(package = lib, character.only = TRUE)) {
+        print("Successful")
+    } else {
+        print("Installing")
+        source("https://bioconductor.org/biocLite.R")
+        biocLite(pkgs = lib)
+        library(lib, character.only = TRUE )
+    }
+}
+
+# Load R objects from previous script output
+load("input/graphical_representation/txi_counts.Rdata")
+load("input/graphical_representation/deseq_object.Rdata")
+load("input/graphical_representation/de_genes_CLO.RData")
+load("input/graphical_representation/de_genes_IMI.RData")
+
+dir.create("results/graphical_representation")
+
+```
+
+
+## Step One: Heatmaps for visualisation of significantly differentially expressed transcripts
+```{r}
+## Generate results table for DE genes between treatments:
+# Set colour pattern
+scalepurpleyellow <- colorRampPalette(colors = c("black", "white", "red"))(700)
+
+## The function takes a z-normalised dataframe as input
+plot_heatmap              <- function(input){
+                             heatmap.2(input, 
+                             col = scalepurpleyellow, 
+                             trace = "none",
+                             margins = c(10,14), 
+                             sepwidth = c(0.01, 0.01), 
+                             sepcolor = "black", 
+                             colsep = c(0,4,8,12),
+                             cexRow = 1,
+                             Colv = NULL,
+                             Rowv = TRUE,
+                             labRow = rownames(input))
+}
+
+##==================================================================================================================
+## 1.1 Genes significantly differentially expressed in clothianidin and imidacloprid group
+##==================================================================================================================
+## Select relevant gene counts from DESeq results (de_genes)
+# normalise counts 
+normalised_counts_df <- t(scale(t(txi_counts$counts), center = TRUE, scale = TRUE))
+
+# Combine de_genes vectors
+#de_genes <- c(de_genes_CLO, de_genes_IMI)
+
+# Select significant gene counts
+significant_de_counts <- normalised_counts_df[de_genes_CLO,]
+# Add sample numbers to columns 
+colnames(significant_de_counts) <- gsub(x = colnames(significant_de_counts), pattern = "-C.*", replacement = "")
+colnames(significant_de_counts) <- paste(colnames(significant_de_counts),+rep(1:4,2))
+
+
+### Put IMI significant gene last
+# Create vector from gene list of auto ordered heatmap 
+
+# Extract ordered genes
+h <- plot_heatmap(significant_de_counts)
+auto_order_de_genes <- rownames(significant_de_counts)[h$rowInd]
+# Create new vector
+reordered_de_genes  <- c(auto_order_de_genes[1:11], auto_order_de_genes[13:33], auto_order_de_genes[12])
+
+# Plot heatmap with reordered genes
+plot_heatmap              <- function(input){
+                             heatmap.2(input, 
+                             col = scalepurpleyellow, 
+                             trace = "none",
+                             margins = c(10,14), 
+                             sepwidth = c(0.01, 0.01), 
+                             sepcolor = "black", 
+                             colsep = c(0,4,8,12),
+                             cexRow = 1,
+                             Colv = NULL,
+                             Rowv = FALSE,
+                             labRow = rownames(input))
+}
+
+significant_de_counts <- normalised_counts_df[reordered_de_genes,]
+# Select significant gene counts
+significant_de_counts <- normalised_counts_df[de_genes_CLO,]
+# Add sample numbers to columns 
+colnames(significant_de_counts) <- gsub(x = colnames(significant_de_counts), pattern = "-C.*", replacement = "")
+colnames(significant_de_counts) <- paste(colnames(significant_de_counts),+rep(1:4,2))
+
+
+plot_heatmap(significant_de_counts[order(significant_de_counts[reordered_de_genes]),])
+  
+#### nb fix this
+  
+
+```
+
+
+
+
+
+
+
+
+
