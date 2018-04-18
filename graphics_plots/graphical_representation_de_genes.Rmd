@@ -47,7 +47,7 @@ plot_heatmap              <- function(input){
                              heatmap.2(input, 
                              col = scalepurpleyellow, 
                              trace = "none",
-                             margins = c(10,14), 
+                             margins = c(8,23), 
                              sepwidth = c(0.01, 0.01), 
                              sepcolor = "black", 
                              colsep = c(0,4,8,12),
@@ -64,53 +64,37 @@ plot_heatmap              <- function(input){
 # normalise counts 
 normalised_counts_df <- t(scale(t(txi_counts$counts), center = TRUE, scale = TRUE))
 
-# Combine de_genes vectors
-#de_genes <- c(de_genes_CLO, de_genes_IMI)
-
 # Select significant gene counts
 significant_de_counts <- normalised_counts_df[de_genes_CLO,]
+
 # Add sample numbers to columns 
 colnames(significant_de_counts) <- gsub(x = colnames(significant_de_counts), pattern = "-C.*", replacement = "")
 colnames(significant_de_counts) <- paste(colnames(significant_de_counts),+rep(1:4,2))
 
+### Replace LOC gene names with descriptions
+# Import txt file with gene descriptions
+genes_for_heatmap <- read.table("input/graphical_representation/de_genes_description.txt", header = FALSE,
+                                sep = "\t")
 
-### Put IMI significant gene last
-# Create vector from gene list of auto ordered heatmap 
-
-# Extract ordered genes
-h <- plot_heatmap(significant_de_counts)
-auto_order_de_genes <- rownames(significant_de_counts)[h$rowInd]
-# Create new vector
-reordered_de_genes  <- c(auto_order_de_genes[1:11], auto_order_de_genes[13:33], auto_order_de_genes[12])
-
-# Plot heatmap with reordered genes
-plot_heatmap              <- function(input){
-                             heatmap.2(input, 
-                             col = scalepurpleyellow, 
-                             trace = "none",
-                             margins = c(10,14), 
-                             sepwidth = c(0.01, 0.01), 
-                             sepcolor = "black", 
-                             colsep = c(0,4,8,12),
-                             cexRow = 1,
-                             Colv = NULL,
-                             Rowv = FALSE,
-                             labRow = rownames(input))
+# Check order matches with rownames of heatmap object 
+if (any(genes_for_heatmap$V1 != rownames(significant_de_counts))) {
+    stop("genes not matched!") 
 }
 
-significant_de_counts <- normalised_counts_df[reordered_de_genes,]
-# Select significant gene counts
-significant_de_counts <- normalised_counts_df[de_genes_CLO,]
-# Add sample numbers to columns 
-colnames(significant_de_counts) <- gsub(x = colnames(significant_de_counts), pattern = "-C.*", replacement = "")
-colnames(significant_de_counts) <- paste(colnames(significant_de_counts),+rep(1:4,2))
+genes_for_heatmap <- as.character(genes_for_heatmap$V2)
 
+# Replace rownames with gene descriptions
+rownames(significant_de_counts) <- genes_for_heatmap
 
-plot_heatmap(significant_de_counts[order(significant_de_counts[reordered_de_genes]),])
-  
-#### nb fix this
-  
+# Cut rownames
+rownames(significant_de_counts)  <- gsub(x = rownames(significant_de_counts), pattern = "[,[].+", replacement = "")
 
+# Export plot 
+tiff("results/graphical_representation/de_genes_heatmap.tiff", width = 10, height = 7, units = 'in', res = 200)
+plot_heatmap(significant_de_counts)
+dev.off()
+
+### Put IMI significant gene last  !
 ```
 
 
