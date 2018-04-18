@@ -94,7 +94,7 @@ tiff("results/graphical_representation/de_genes_heatmap.tiff", width = 10, heigh
 plot_heatmap(significant_de_counts)
 dev.off()
 
-### Put IMI significant gene last  !
+##### Still to work out putting sig IMI gene last!
 ```
 
 
