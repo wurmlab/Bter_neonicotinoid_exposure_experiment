@@ -13,7 +13,7 @@ output: 2018-02-28-graphics.nb.html
 
 ```{r}
 # Load libraries; install from scratch if needed
-libraries <- c("ggplot2", "gplots", "heatmap3", "ggfortify", "ggDESeq")
+libraries <- c("ggplot2", "gplots", "heatmap3", "ggfortify", "ggDESeq", "reshape")
 for (lib in libraries) {
     if (require(package = lib, character.only = TRUE)) {
         print("Successful")
@@ -97,11 +97,34 @@ dev.off()
 ##### Still to work out putting sig IMI gene last!
 ```
 
+Alternative code for plotting heatmap:
 
+```{r}
+## Convert significant counts into a dataframe:
+significant_de_counts_df <- as.data.frame(significant_de_counts)
 
+## Add column with gene information:
+significant_de_counts_df$gene_name <- rownames(significant_de_counts_df)
 
+## Reshape using 'melt':
+significant_de_counts_df_melt <- melt(significant_de_counts_df)
 
+## Rename column names:
+colnames(significant_de_counts_df_melt) <- c("gene_name", "sample", "logFC")
 
+## Plot heatmap:
+ggplot(significant_de_counts_df_melt, aes(sample, gene_name)) +
+                  geom_tile(aes(fill = logFC), color = "black") +
+                  geom_vline(xintercept = c(4.5, 8.5)) +
+                  scale_fill_gradient2(low = "grey", mid="white", high = "red") +
+                  ylab("Gene names") +
+                  xlab("Sample names") +
+                  theme(legend.title = element_text(size = 15, face="bold"),
+                  legend.text = element_text(size = 15, face="bold"),
+                  axis.text.x = element_text(angle = 45, hjust = 1, size=8, face="bold"),
+                  axis.text.y= element_text(size=8, face="bold"),
+                  axis.title=element_text(size=14,face="bold")) +
+                  theme(legend.position="top") +
+                  scale_y_discrete(position = "right")
 
-
-
+```
