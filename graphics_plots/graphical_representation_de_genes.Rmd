@@ -1,8 +1,6 @@
 --- 
 title: "Graphical representation of DE genes"
-output: 2018-02-28-graphics.nb.html
 --- 
----
 
 ## Introduction:
 #=================
@@ -13,7 +11,8 @@ output: 2018-02-28-graphics.nb.html
 
 ```{r}
 # Load libraries; install from scratch if needed
-libraries <- c("ggplot2", "gplots", "heatmap3", "ggfortify", "ggDESeq", "reshape")
+libraries <- c("ggplot2", "gplots", "heatmap3", "ggfortify", "ggDESeq",
+               "reshape2", "scales")
 for (lib in libraries) {
     if (require(package = lib, character.only = TRUE)) {
         print("Successful")
@@ -35,73 +34,39 @@ dir.create("results/graphical_representation")
 
 ```
 
-
-## Step One: Heatmaps for visualisation of significantly differentially expressed transcripts
+## Step One: Heatmaps for visualisation of significantly differentially expressed genes 
 ```{r}
-## Generate results table for DE genes between treatments:
-# Set colour pattern
-scalepurpleyellow <- colorRampPalette(colors = c("black", "white", "red"))(700)
-
-## The function takes a z-normalised dataframe as input
-plot_heatmap              <- function(input){
-                             heatmap.2(input, 
-                             col = scalepurpleyellow, 
-                             trace = "none",
-                             margins = c(8,23), 
-                             sepwidth = c(0.01, 0.01), 
-                             sepcolor = "black", 
-                             colsep = c(0,4,8,12),
-                             cexRow = 1,
-                             Colv = NULL,
-                             Rowv = TRUE,
-                             labRow = rownames(input))
-}
-
-##==================================================================================================================
+##==========================================================================================================
 ## 1.1 Genes significantly differentially expressed in clothianidin and imidacloprid group
-##==================================================================================================================
+##==========================================================================================================
+### Organise data ####
 ## Select relevant gene counts from DESeq results (de_genes)
 # normalise counts 
 normalised_counts_df <- t(scale(t(txi_counts$counts), center = TRUE, scale = TRUE))
 
-# Select significant gene counts
+## Select significant gene counts
 significant_de_counts <- normalised_counts_df[de_genes_CLO,]
 
-# Add sample numbers to columns 
-colnames(significant_de_counts) <- gsub(x = colnames(significant_de_counts), pattern = "-C.*", replacement = "")
-colnames(significant_de_counts) <- paste(colnames(significant_de_counts),+rep(1:4,2))
+## Convert significant counts into a dataframe:
+significant_de_counts_df <- as.data.frame(significant_de_counts)
 
-### Replace LOC gene names with descriptions
-# Import txt file with gene descriptions
-genes_for_heatmap <- read.table("input/graphical_representation/de_genes_description.txt", header = FALSE,
-                                sep = "\t")
+## Import txt file with gene descriptions
+genes_for_heatmap <- read.table("./input/graphical_representation/de_genes_for_heatmap.txt", header = FALSE, sep = "\t", fill = TRUE)
+
+## Double check this order matches with that in significant_de_counts_df 
+genes_for_heatmap_LOC <- gsub(genes_for_heatmap$V1,  pattern = ".*[:(:]", replacement = "")
+genes_for_heatmap_LOC <- gsub(genes_for_heatmap_LOC, pattern = "[:):]", replacement = "")
 
 # Check order matches with rownames of heatmap object 
-if (any(genes_for_heatmap$V1 != rownames(significant_de_counts))) {
+if (any(genes_for_heatmap_LOC != rownames(significant_de_counts_df))) {
     stop("genes not matched!") 
 }
 
-genes_for_heatmap <- as.character(genes_for_heatmap$V2)
+# Remove object 
+rm(genes_for_heatmap_LOC)
 
-# Replace rownames with gene descriptions
-rownames(significant_de_counts) <- genes_for_heatmap
-
-# Cut rownames
-rownames(significant_de_counts)  <- gsub(x = rownames(significant_de_counts), pattern = "[,[].+", replacement = "")
-
-# Export plot 
-tiff("results/graphical_representation/de_genes_heatmap.tiff", width = 10, height = 7, units = 'in', res = 200)
-plot_heatmap(significant_de_counts)
-dev.off()
-
-##### Still to work out putting sig IMI gene last!
-```
-
-Alternative code for plotting heatmap:
-
-```{r}
-## Convert significant counts into a dataframe:
-significant_de_counts_df <- as.data.frame(significant_de_counts)
+# Add rownames with gene descriptions
+rownames(significant_de_counts_df) <- genes_for_heatmap$V1
 
 ## Add column with gene information:
 significant_de_counts_df$gene_name <- rownames(significant_de_counts_df)
@@ -109,22 +74,53 @@ significant_de_counts_df$gene_name <- rownames(significant_de_counts_df)
 ## Reshape using 'melt':
 significant_de_counts_df_melt <- melt(significant_de_counts_df)
 
-## Rename column names:
+## Rename column names
 colnames(significant_de_counts_df_melt) <- c("gene_name", "sample", "logFC")
 
-## Plot heatmap:
-ggplot(significant_de_counts_df_melt, aes(sample, gene_name)) +
-                  geom_tile(aes(fill = logFC), color = "black") +
-                  geom_vline(xintercept = c(4.5, 8.5)) +
-                  scale_fill_gradient2(low = "grey", mid="white", high = "red") +
-                  ylab("Gene names") +
-                  xlab("Sample names") +
-                  theme(legend.title = element_text(size = 15, face="bold"),
-                  legend.text = element_text(size = 15, face="bold"),
-                  axis.text.x = element_text(angle = 45, hjust = 1, size=8, face="bold"),
-                  axis.text.y= element_text(size=8, face="bold"),
-                  axis.title=element_text(size=14,face="bold")) +
-                  theme(legend.position="top") +
-                  scale_y_discrete(position = "right")
+# Add sample numbers to columns 
+significant_de_counts_df_melt$sample <- gsub(x = significant_de_counts_df_melt$sample, pattern = "-C.*", replacement = "")
+significant_de_counts_df_melt$sample  <- paste(significant_de_counts_df_melt$sample, +rep(1:4,2))
 
 ```
+
+# 1.2) Function to plot heatmap
+```{r}
+
+plot_heatmap <- function(input) {
+                ggplot(input, aes(sample, gene_name)) +
+                geom_tile(aes(fill = logFC)) +
+                geom_vline(xintercept = c(4.5, 8.5)) +
+                scale_fill_gradient2(low = "black", mid = "white", high = "darkred") +
+                xlab("Samples") +
+                ylab("") +
+                theme(legend.title = element_text(size = 15, face = "bold"),
+                      legend.text = element_text(size = 15, face = "bold"),
+                      axis.text.x = element_text(angle = 45, hjust = 1, size = 8, face = "bold"),
+                      axis.text.y = element_text(size = 8, face = "bold"),
+                      axis.title = element_text(size = 14,face = "bold"),
+                      panel.grid.major = element_blank(),
+                      panel.grid.minor = element_blank(),
+                      panel.background = element_blank()) +
+                theme(legend.position = "top") +
+                scale_y_discrete(position = "right") +
+                annotate(geom = "text", x = 12, y = 26, label = "*",
+                         size = 5, fontface = "bold")
+     
+}
+
+
+```
+
+# 1.3) Plot heatmap and save 
+```{r}
+tiff("results/graphical_representation/de_genes_heatmap.tiff", width = 15, height = 7, units = 'in', res = 200)
+plot_heatmap(significant_de_counts_df_melt)
+dev.off()
+```
+
+
+
+
+
+
+
