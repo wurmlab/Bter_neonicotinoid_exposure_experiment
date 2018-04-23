@@ -162,6 +162,9 @@ deseq_pairwise_CLO_lfc_high <- deseq_results_CLO_significant[which(deseq_results
 # Identify genes less expressed in CLO group 
 deseq_pairwise_CLO_lfc_low <- deseq_results_CLO_significant[which(deseq_results_CLO_significant$log2FoldChange > 0),] # n = 12
 
+# Export significance values for use in heatmap ordering
+de_genes_significance <- deseq_results_CLO_significant$padj
+save(de_genes_significance, file = "input/graphical_representation/de_genes_significance.RData")
 ```
 
 ```{r}
