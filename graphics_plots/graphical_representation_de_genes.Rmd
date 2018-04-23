@@ -81,16 +81,21 @@ colnames(significant_de_counts_df_melt) <- c("gene_name", "sample", "logFC")
 significant_de_counts_df_melt$sample <- gsub(x = significant_de_counts_df_melt$sample, pattern = "-C.*", replacement = "")
 significant_de_counts_df_melt$sample  <- paste(significant_de_counts_df_melt$sample, +rep(1:4,2))
 
+# Add significance levels to order by significance 
+load("input/graphical_representation/de_genes_significance.RData")
+significant_de_counts_df_melt$padj <- de_genes_significance
+
+
 ```
 
 # 1.2) Function to plot heatmap
 ```{r}
 
 plot_heatmap <- function(input) {
-                ggplot(input, aes(sample, gene_name)) +
+                ggplot(input, aes(sample, reorder(gene_name, padj))) +
                 geom_tile(aes(fill = logFC)) +
                 geom_vline(xintercept = c(4.5, 8.5)) +
-                scale_fill_gradient2(low = "black", mid = "white", high = "darkred") +
+                scale_fill_gradient2(low = "black", mid = "white", high = "red") +
                 xlab("Samples") +
                 ylab("") +
                 theme(legend.title = element_text(size = 15, face = "bold"),
@@ -103,7 +108,7 @@ plot_heatmap <- function(input) {
                       panel.background = element_blank()) +
                 theme(legend.position = "top") +
                 scale_y_discrete(position = "right") +
-                annotate(geom = "text", x = 12, y = 26, label = "*",
+                annotate(geom = "text", x = 12, y = 1, label = "*",
                          size = 5, fontface = "bold")
      
 }
