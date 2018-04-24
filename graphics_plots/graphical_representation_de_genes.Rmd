@@ -29,6 +29,7 @@ load("input/graphical_representation/txi_counts.Rdata")
 load("input/graphical_representation/deseq_object.Rdata")
 load("input/graphical_representation/de_genes_CLO.RData")
 load("input/graphical_representation/de_genes_IMI.RData")
+load("input/graphical_representation/de_genes_lfc.RData")
 
 dir.create("results/graphical_representation")
 
@@ -65,35 +66,36 @@ if (any(genes_for_heatmap_LOC != rownames(significant_de_counts_df))) {
 # Remove object 
 rm(genes_for_heatmap_LOC)
 
+## Add column with gene information:
+significant_de_counts_df$gene_name <- rownames(significant_de_counts_df)
+
+### Reorder based on logFC's 
+significant_de_counts_df <- significant_de_counts_df[match(significant_de_counts_df$gene_name, rownames(de_genes_lfc)),]
+
 # Add rownames with gene descriptions
 rownames(significant_de_counts_df) <- genes_for_heatmap$V1
 
-## Add column with gene information:
 significant_de_counts_df$gene_name <- rownames(significant_de_counts_df)
 
 ## Reshape using 'melt':
 significant_de_counts_df_melt <- melt(significant_de_counts_df)
 
 ## Rename column names
-colnames(significant_de_counts_df_melt) <- c("gene_name", "sample", "logFC")
+colnames(significant_de_counts_df_melt) <- c("gene_name", "sample", "normalised_counts")
 
 # Add sample numbers to columns 
-significant_de_counts_df_melt$sample <- gsub(x = significant_de_counts_df_melt$sample, pattern = "-C.*", replacement = "")
+significant_de_counts_df_melt$sample  <- gsub(x = significant_de_counts_df_melt$sample, pattern = "-C.*", replacement = "")
 significant_de_counts_df_melt$sample  <- paste(significant_de_counts_df_melt$sample, +rep(1:4,2))
-
-# Add significance levels to order by significance 
-load("input/graphical_representation/de_genes_significance.RData")
-significant_de_counts_df_melt$padj <- de_genes_significance
-
-
+  
+  
 ```
 
 # 1.2) Function to plot heatmap
 ```{r}
 
 plot_heatmap <- function(input) {
-                ggplot(input, aes(sample, reorder(gene_name, padj))) +
-                geom_tile(aes(fill = logFC)) +
+                ggplot(input, aes(sample, reorder(gene_name, normalised_counts))) +
+                geom_tile(aes(fill = normalised_counts)) +
                 geom_vline(xintercept = c(4.5, 8.5)) +
                 scale_fill_gradient2(low = "black", mid = "white", high = "red") +
                 xlab("Samples") +
@@ -108,8 +110,7 @@ plot_heatmap <- function(input) {
                       panel.background = element_blank()) +
                 theme(legend.position = "top") +
                 scale_y_discrete(position = "right") +
-                annotate(geom = "text", x = 12, y = 1, label = "*",
-                         size = 5, fontface = "bold")
+                geom_hline(yintercept = c(22.5, 23.5)) 
      
 }
 
@@ -119,13 +120,9 @@ plot_heatmap <- function(input) {
 # 1.3) Plot heatmap and save 
 ```{r}
 tiff("results/graphical_representation/de_genes_heatmap.tiff", width = 15, height = 7, units = 'in', res = 200)
-plot_heatmap(significant_de_counts_df_melt)
+plot_heatmap(significant_de_counts_df_melt) 
 dev.off()
 ```
-
-
-
-
 
 
 
