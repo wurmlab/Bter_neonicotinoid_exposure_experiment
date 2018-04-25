@@ -1,0 +1,143 @@
+--- 
+title: "Graphical representation of DE genes"
+--- 
+
+Introduction:
+
+This script is for exploratory analysis of transcript quantification data and results of differential gene expression analysis.
+Input files should be R objects saved and generated from previous scripts of DE analysis, including the object resulting from using tximport() on kallisto files, the significant transcript abundances selected from this object and a results table of significant genes, generated using DESeq2. 
+This script will organise input data for generating heatmaps of significantly differentially expressed genes, based on statistical significance and log fold changes in expression. This script produces a heatmap that can be exported. 
+
+```{r}
+# Load libraries; install from scratch if needed
+libraries <- c("ggplot2", "gplots", "heatmap3", "ggfortify", "ggDESeq",
+               "reshape2", "scales")
+for (lib in libraries) {
+    if (require(package = lib, character.only = TRUE)) {
+        print("Successful")
+    } else {
+        print("Installing")
+        source("https://bioconductor.org/biocLite.R")
+        biocLite(pkgs = lib)
+        library(lib, character.only = TRUE )
+    }
+}
+
+# Load R objects from previous script output
+load("input/graphical_representation/txi_counts.Rdata")
+load("input/graphical_representation/deseq_object.Rdata")
+load("input/graphical_representation/de_genes_CLO.RData")
+load("input/graphical_representation/de_genes_IMI.RData")
+load("input/graphical_representation/de_genes_lfc.RData")
+
+## Assign path for output:
+output <- "results/graphical_representation"
+dir.create(output)
+```
+
+Step One: Organise data for generating a heatmap:
+We load in raw estimated counts from tximport and normalise.  
+We subset genes identified to be differentially expressed by DESeq2. 
+We rename sample names (column names in dataframe) for plotting.
+We add new annotations for each gene to plot. 
+
+```{r}
+## Normalise counts: 
+normalised_counts_df <- t(scale(t(txi_counts$counts), center = TRUE, scale = TRUE))
+
+## Select significant gene counts
+significant_de_counts <- normalised_counts_df[de_genes_CLO,]
+
+## Convert significant counts into a dataframe:
+significant_de_counts_df <- as.data.frame(significant_de_counts)
+
+## Import txt file with gene descriptions
+#genes_for_heatmap <- read.table("./input/graphical_representation/de_genes_for_heatmap.txt", header = FALSE, sep = "\t", fill = TRUE)
+
+##========================================================================
+## Section is redundant now:
+##========================================================================
+## Double check this order matches with that in significant_de_counts_df 
+#genes_for_heatmap_LOC <- gsub(genes_for_heatmap$V1,  pattern = ".*[:(:]", replacement = "")
+#genes_for_heatmap_LOC <- gsub(genes_for_heatmap_LOC, pattern = "[:):]", replacement = "")
+
+# Check order matches with rownames of heatmap object 
+#if (any(genes_for_heatmap_LOC != rownames(significant_de_counts_df))) {
+#    stop("genes not matched!") 
+#}
+
+# Remove object 
+#rm(genes_for_heatmap_LOC)
+##========================================================================
+# Add sample numbers to columns: 
+new_sample_names <- gsub(x = colnames(significant_de_counts_df), pattern = "-C.*", replacement = "")
+
+new_sample_names <- paste(new_sample_names, +rep(1:4,2), sep="_")
+
+## rename column names:
+colnames(significant_de_counts_df) <- new_sample_names
+
+## Add rownames with gene descriptions:
+rownames(significant_de_counts_df) <- genes_for_heatmap$V1
+
+significant_de_counts_df$gene_name <- rownames(significant_de_counts_df)
+```
+
+Step Two: Calculate clusters based on gene expression across samples:
+
+```{r}
+## Calculate eucleidean distance between rows:
+dd<-hclust(dist(as.matrix(significant_de_counts_df[,1:12])))
+
+## Reorder based on cluster order:
+significant_de_counts_df_reordered <- as.data.frame(significant_de_counts_df[dd$order, ])
+
+## Melt dataframe:
+significant_de_counts_df_reordered_melt <- melt(significant_de_counts_df_reordered)
+
+## Rename columns:
+colnames(significant_de_counts_df_reordered_melt) <- c("gene_name", "sample", "normalised_counts")
+
+```
+
+Step Three: Plot heatmap
+We plot heatmap using normalised counts as input into ggplot2.  
+
+```{r}
+## Reorder "gene_name" for plotting:
+significant_de_counts_df_reordered_melt$gene_name<- 
+        factor(significant_de_counts_df_reordered_melt$gene_name, levels=rev(c(as.character(unlist(significant_de_counts_df_reordered_melt$gene_name)))))
+
+## Plot heatmap:
+heatmap_plot <- ggplot(significant_de_counts_df_reordered_melt, aes(sample, gene_name)) +
+                geom_tile(aes(fill = normalised_counts)) +
+                geom_vline(xintercept = c(4.5, 8.5)) +
+                geom_hline(yintercept = c(32.5, 33.5)) + 
+                scale_fill_gradient2(low = "black", mid = "white", high = "red") +
+                xlab("Samples") +
+                ylab("") +
+                theme(legend.title = element_text(size = 15, face = "bold"),
+                      legend.text = element_text(size = 15, face = "bold"),
+                      axis.text.x = element_text(angle = 45, hjust = 1, size = 8, face = "bold"),
+                      axis.text.y = element_text(size = 8, face = "bold"),
+                      axis.title = element_text(size = 14,face = "bold"),
+                      panel.grid.major = element_blank(),
+                      panel.grid.minor = element_blank(),
+                      panel.background = element_blank()) +
+                theme(legend.position = "top") +
+                scale_y_discrete(position = "right") 
+
+## Print to console:
+heatmap_plot
+```
+
+Step Four: Save heatmap to output.   
+
+```{r}
+tiff("results/graphical_representation/de_genes_heatmap.tiff", width = 15, height = 7, units = 'in', res = 200)
+heatmap_plot
+dev.off()
+```
+
+
+
