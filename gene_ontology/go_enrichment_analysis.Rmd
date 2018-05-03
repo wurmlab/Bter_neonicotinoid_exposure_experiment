@@ -24,7 +24,7 @@ This script outputs a results table of significantly enriched GO terms.
 
 ```{r}
 # Load libraries; install from scratch if needed
-libraries <- c("topGO", "lintr")
+libraries <- c("topGO", "lintr", "lattice")
 for (lib in libraries) {
     if (require(package = lib, character.only = TRUE)) {
         print("Successful")
@@ -43,7 +43,7 @@ Load in genelist and database files.
 ```{r}
 ## Step One
 ## GO annotations
-gene_to_go_mapping_file <- "input/blast2go_mapping_20171223_1007.input_database_for_topGO.txt"
+gene_to_go_mapping_file <- "input/bter_drosophila_orthologues_go_term_database_for_topgo.txt"
 
 ## file of significant genes (2 column file: i.e. gene id and pvalue) file:
 de_genes_file <- "input/de_genes_for_topGO.txt"
@@ -105,7 +105,7 @@ for (go_category in c("BP", "MF", "CC")) {
                     allGenes    = topgo_genelist,
                     gene2GO     = gene_to_go_mapping,
                     annot       = annFUN.gene2GO,
-                    nodeSize    = 100) # Modify to reduce/increase stringency.
+                    nodeSize    = 50) # Modify to reduce/increase stringency.
   
   # STEP THREE
   ## Calculate ks test using 'weight01' algorithm:
@@ -134,7 +134,17 @@ for (go_category in c("BP", "MF", "CC")) {
                          whichGO = head(result_weight_output_sig$GO.ID, n = 1),
                          ranks   = TRUE,
                          rm.one  = FALSE))
-  
+  ## Print out all GO terms of interest:
+  for (go_term in 1:nrow(result_weight_output_sig)){
+          output_name <- head(result_weight_output_sig$GO.ID, n = go_term)
+          output_name <- paste("./", output_name, ".pdf", sep="")
+          pdf()
+          print(showGroupDensity(object  = my_go_data,
+                         whichGO = result_weight_output_sig$GO.ID[go_term],
+                         ranks   = TRUE,
+                         rm.one  = FALSE))
+          dev.off
+  }
   ## Write to output:
   write.table(x         = result_weight_output_sig,
               file      = file.path(output_directory,
