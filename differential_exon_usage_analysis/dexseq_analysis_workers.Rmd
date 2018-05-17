@@ -120,6 +120,12 @@ dexseq_object_results_significant <- subset(dexseq_object_results, padj < 0.05)
 ## Order by signficance:
 dexseq_object_results_significant_reordered <- dexseq_object_results_significant[order(dexseq_object_results_significant$padj),]
 
+## Write signifance table to file:
+write.table(dexseq_object_results_significant_reordered,
+            file="dexseq_object_results_sig_clothianidin.txt",
+            row.names = TRUE,
+            col.names = TRUE,
+            sep="\t")
 ```
 
 Step Seven: Visualisation
