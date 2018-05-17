@@ -1,7 +1,7 @@
 ## Differential exon usage analysis:  
 
 Steps involved in the preparation of raw data for differential exon usage analysis.  
-Alignment of data was performed using [HISAT2]("https://ccb.jhu.edu/software/hisat2/index.shtml") as recommended by [MIke Love]("https://support.bioconductor.org/p/108576/").
+Alignment of data was performed using HISAT2("https://ccb.jhu.edu/software/hisat2/index.shtml") as recommended by Mike Love ("https://support.bioconductor.org/p/108576/").
 
 1. Create hisat2 index:
 ```
