@@ -23,4 +23,4 @@ python dexseq_prepare_annotation.py Bombus_terrestris.Bter_1.0.39.gtf Bombus_ter
 python dexseq_count.py Bombus_terrestris.Bter_1.0.39.gff3 sample.sam sample.fb.txt 
 ```
 
-5. Perform DEU analysis using ```dexseq_analysis_workers.Rmd```. 
+5. Perform DEU analysis using ```dexseq_analysis.Rmd```. 
