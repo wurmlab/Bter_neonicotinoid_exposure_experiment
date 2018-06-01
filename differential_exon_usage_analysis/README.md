@@ -27,10 +27,7 @@ python dexseq_count.py Bombus_terrestris.Bter_1.0.39.gff3 sample.sam sample.fb.t
 
 6. Prepare DEXSeq output for input into ```go_enrichment_analysis.Rmd```.  
 
-DEXSeq outputs a tab-delimited text file with multiple fields, including p-values for each exon per gene within the bumblebee genome.    
-For running ```go_enrichment_analysis.Rmd```, we only require two fields, which contain information on gene name and adjusted p-values.  
-
-We use the script ```get_lowest_exon_p_value.sh```, which takes the output of ```dexseq_analysis.Rmd```, extracts fields of interest and formats into the input format for running ```go_enrichment_analysis.Rmd```.  
+DEXSeq outputs a tab-delimited text file with multiple fields, including p-values for each exon per gene within the bumblebee genome. For running ```go_enrichment_analysis.Rmd```, we only require two fields, which contain information on gene name and adjusted p-values. We use the script ```get_lowest_exon_p_value.sh```, which takes the output of ```dexseq_analysis.Rmd```, extracts fields of interest and formats into the input format for running ```go_enrichment_analysis.Rmd```.  
 
 To run ```get_lowest_exon_p_value.sh```, use:  
 ```
