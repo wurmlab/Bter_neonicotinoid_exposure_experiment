@@ -56,12 +56,12 @@ done < "$input".gene_list.tmp
 ## Add header information applicable for topGO Rscript:
 echo "locus" "adjusted_pvalue" | \
  sed 's/ /\t/g' - | \
- cat - "$output".tmp > "$output".txt
+ cat - "$output".tmp > "$output"
 
 ## Remove any spurious inverted commas present within the dataset:  
-sed -i 's/"//g' "$output".txt
-grep -v 'XM_' "$output".txt > "$output".tmp
-mv "$output".tmp "$output".txt
+sed -i 's/"//g' "$output"
+grep -v 'XM_' "$output" > "$output".tmp
+mv "$output".tmp "$output"
 
 ## Remove temporary files:
 rm *.tmp
