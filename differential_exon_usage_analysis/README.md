@@ -36,5 +36,5 @@ chmod +x get_lowest_exon_p_value.sh
 
 To run ```get_lowest_exon_p_value.sh```, use:  
 ```
-./get_lowest_exon_p_value.sh results/dexseq_results_all.txt input/dexseq_results_all.input_to_topgo.txt
+./get_lowest_exon_p_value.sh output/dexseq_results_all.txt input/dexseq_results_all.input_to_topgo.txt
 ```
