@@ -100,7 +100,7 @@ for (go_category in c("BP", "MF", "CC")) {
                     description = paste("GOtest", go_category, sep = "_"),
                     ontology    = go_category,
                     geneSel     = function(x) { # fails to run without this
-                                     return(x < cutoff_for_top_fivepercent)
+                                     return(x <= cutoff_for_top_fivepercent)
                                    },
                     allGenes    = topgo_genelist,
                     gene2GO     = gene_to_go_mapping,
