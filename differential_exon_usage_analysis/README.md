@@ -24,3 +24,5 @@ python dexseq_count.py Bombus_terrestris.Bter_1.0.39.gff3 sample.sam sample.fb.t
 ```
 
 5. Perform DEU analysis using ```dexseq_analysis.Rmd```. 
+
+6. Prepare DEXSeq output for input into ```gene
