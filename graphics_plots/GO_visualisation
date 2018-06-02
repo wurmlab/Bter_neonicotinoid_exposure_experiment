@@ -1,0 +1,102 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+title: "Bombus pesticide exposure: gene expression in head"
+output: GO_enrichment_visualisation.html
+---
+
+## Introduction 
+# This script is for visualisation of the output of gene ontology (GO) analyses using the R package TopGo.
+# This script creates a barchart of the number of significant genes annotated to a particular GO term, with an associated p-value.
+# This script takes an input of .csv files containing an output table of GO analyses.
+
+```{r}
+# Load libraries; install from scratch if needed
+libraries <- c("ggplot2", "lattice", "ggpubr")
+for (lib in libraries) {
+    if (require(package = lib, character.only = TRUE)) {
+        print("Successful")
+    } else {
+        print("Installing")
+        source("https://bioconductor.org/biocLite.R")
+        biocLite(pkgs = lib)
+        library(lib, character.only = TRUE )
+    }
+}
+```
+
+## Step One: Load input files
+```{r}
+### Worker GO analyses
+worker <- read.csv("input/DESEq/worker_clothianidin.csv", header = TRUE)
+worker$category <- factor(worker$category)
+
+# Set order of GO categories to plot
+levels(worker$category) <- c("BP", "MF", "CC")
+
+# Round p values to plot
+worker$weight_ks <- round(worker$weight_ks, digits = 3)
+
+### Queen GO analyses
+queen <- read.csv("input/DESEq/queen_clothianidin.csv", header = TRUE)
+queen$category <- factor(queen$category)
+
+# Set order of GO categories to plot
+levels(queen$category) <- c("BP", "MF", "CC")
+
+# Round p values to plot
+queen$weight_ks <- round(queen$weight_ks, digits = 3)
+
+```
+
+## Step Two: Plot a barchart of GO terms and number of genes, for both worker and queen GO analyses, with significance values (ks tests)
+```{r}
+# Reorder terms for plotting in categories
+worker$Term <- factor(worker$Term, levels = worker$Term[order(worker$category, worker$Significant)])
+
+worker_plot <- ggplot(worker, aes(x = Term, y = Significant, fill = category)) +
+  geom_bar(stat = "identity", width = 0.5) +
+  geom_text(aes(label = weight_ks), hjust = -0.1, size = 3) +
+  coord_flip() +
+  scale_fill_manual(values = c("lightblue", "gold", "darkseagreen")) +
+  labs(x = "", y = "") +
+  scale_y_continuous(expand = c(0,0)) +
+  expand_limits(y = 130) +
+  theme(axis.text.x = element_text(hjust = 1, size = 10),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"),
+        legend.title = element_blank(),
+        axis.text.y = element_text(size = 12),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 12, face = "bold")) 
+
+# Reorder terms for plotting in categories
+queen$Term <- factor(queen$Term, levels = queen$Term[order(queen$category, queen$Significant)])
+
+queen_plot <- ggplot(queen, aes(x = Term, y = Significant, fill = category)) +
+  geom_bar(stat = "identity", width = 0.5) +
+  geom_text(aes(label = weight_ks), hjust = -0.1, size = 3) +
+  coord_flip() +
+  scale_fill_manual(values = c("lightblue", "gold", "darkseagreen")) +
+  labs(x = "", y = "Number of genes") +
+  scale_y_continuous(expand = c(0,0)) +
+  expand_limits(y = 40) +
+  theme(axis.text.x = element_text(hjust = 1, size = 10),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "black"),
+        legend.title=element_blank(),
+        axis.text.y = element_text(size = 12),
+        axis.title.y = element_text(size = 12, face = "bold"),
+        axis.title.x = element_text(size = 12, face = "bold")) 
+
+## Plot both queens and workers together
+tiff("output/DESeq_go.tiff", width = 11, height = 8, units = 'in', res = 300)
+
+ggarrange(worker_plot, queen_plot,
+            nrow = 2, ncol = 1, common.legend = TRUE, legend = "right",
+          labels = c("a", "b"), align = "hv")
+
+dev.off()
+
+```
