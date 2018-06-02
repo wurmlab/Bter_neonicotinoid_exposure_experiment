@@ -97,6 +97,6 @@ ggarrange(worker_plot, queen_plot,
             nrow = 2, ncol = 1, common.legend = TRUE, legend = "right",
           labels = c("a", "b"), align = "hv")
 
-dev.off()
+dev.off() 
 
 ```
