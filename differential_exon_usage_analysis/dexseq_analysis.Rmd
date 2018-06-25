@@ -120,7 +120,8 @@ write.table(dexseq_object_results,
             file="./results/dexseq_object_results_all_clothianidin.txt",
             row.names = TRUE,
             col.names = TRUE,
-            sep="\t")
+            sep="\t",
+            quote=FALSE)
 
 ## Investigate how many exons are significantly differently used between treatments
 table(dexseq_object_results$padj < 0.05)
