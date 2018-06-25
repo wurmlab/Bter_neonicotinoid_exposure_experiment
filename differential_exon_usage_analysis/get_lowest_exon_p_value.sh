@@ -45,7 +45,8 @@ echo "step one: extracting fields of interest"
 cut -f 1,7 "$input" | tail -n +2 - | sort -k2,2nr - > "$input".tmp
  
 ## Extract unique gene list:
-cut -f 1 "$input" | sort | uniq - > "$input".gene_list.tmp
+echo 'extracting unique gene list'
+cut -d ':' -f 1 "$input".tmp | sort | uniq - > "$input".gene_list.tmp
 
 ## Loop and extract lowest p-value per gene: 
 while read line ; 
@@ -53,12 +54,13 @@ do
 grep "$line" "$input".tmp | head -n 1 - >> "$output".tmp; 
 done < "$input".gene_list.tmp
 
+echo 'lowest p-value per gene extraction - completion'
 ## Add header information applicable for topGO Rscript:
 echo "locus" "adjusted_pvalue" | \
  sed 's/ /\t/g' - | \
  cat - "$output".tmp > "$output"
 
-## Remove any spurious inverted commas present within the dataset:  
+##<C2><A0>Remove any spurious inverted commas present within the dataset:  
 sed -i 's/"//g' "$output"
 grep -v 'XM_' "$output" > "$output".tmp
 mv "$output".tmp "$output"
@@ -67,5 +69,4 @@ mv "$output".tmp "$output"
 rm *.tmp
 
 ## Print to console:
-echo "step one: extracting fields of interest - complete!"
-echo "script completed"
+echo "step one: extracting

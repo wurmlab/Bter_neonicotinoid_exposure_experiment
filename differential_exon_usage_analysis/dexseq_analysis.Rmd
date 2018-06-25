@@ -34,7 +34,7 @@ We used HTSeq to extract read counts for each exon bin.
 
 ```{r}
 ## Read in files:
-countFiles = list.files("./input/", pattern="fb.txt$", full.names=TRUE)
+countFiles = list.files("./input/", pattern="fb_counts.txt$", full.names=TRUE)
 basename(countFiles)
 
 flattenedFile = list.files("./input/", pattern="gff$", full.names=TRUE)
@@ -114,6 +114,13 @@ dexseq_object = testForDEU(dexseq_object)
 dexseq_object = estimateExonFoldChanges(dexseq_object, fitExpToVar="treatment")
 
 dexseq_object_results = DEXSeqResults(dexseq_object)
+
+## Write all results to file:
+write.table(dexseq_object_results,
+            file="./results/dexseq_object_results_all_clothianidin.txt",
+            row.names = TRUE,
+            col.names = TRUE,
+            sep="\t")
 
 ## Investigate how many exons are significantly differently used between treatments
 table(dexseq_object_results$padj < 0.05)
