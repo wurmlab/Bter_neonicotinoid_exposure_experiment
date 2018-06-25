@@ -69,4 +69,4 @@ mv "$output".tmp "$output"
 rm *.tmp
 
 ## Print to console:
-echo "step one: extracting
+echo "step one: extracting"
