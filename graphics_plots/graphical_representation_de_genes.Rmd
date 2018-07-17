@@ -11,7 +11,7 @@ This script will organise input data for generating heatmaps of significantly di
 ```{r}
 # Load libraries; install from scratch if needed
 libraries <- c("ggplot2", "gplots", "heatmap3", "ggfortify", "ggDESeq",
-               "reshape2", "scales")
+               "reshape2", "scales", "ggpubr", "grid")
 for (lib in libraries) {
     if (require(package = lib, character.only = TRUE)) {
         print("Successful")
@@ -24,14 +24,14 @@ for (lib in libraries) {
 }
 
 # Load R objects from previous script output
-load("input/graphical_representation/txi_counts.Rdata")
-load("input/graphical_representation/deseq_object.Rdata")
-load("input/graphical_representation/de_genes_CLO.RData")
-load("input/graphical_representation/de_genes_IMI.RData")
-load("input/graphical_representation/de_genes_lfc.RData")
+load("input/workers/graphical_representation/txi_counts.Rdata")
+load("input/workers/graphical_representation/deseq_object.Rdata")
+load("input/workers/graphical_representation/de_genes_CLO.RData")
+load("input/workers/graphical_representation/de_genes_IMI.RData")
+load("input/workers/graphical_representation/de_genes_lfc.RData")
 
 ## Assign path for output:
-output <- "results/graphical_representation"
+output <- "results"
 dir.create(output)
 ```
 
@@ -52,7 +52,7 @@ significant_de_counts <- normalised_counts_df[de_genes_CLO,]
 significant_de_counts_df <- as.data.frame(significant_de_counts)
 
 ## Import txt file with gene descriptions
-#genes_for_heatmap <- read.table("./input/graphical_representation/de_genes_for_heatmap.txt", header = FALSE, sep = "\t", fill = TRUE)
+genes_for_heatmap <- read.table("./input/workers/graphical_representation/de_genes_for_heatmap.txt", header = FALSE, sep = "\t", fill = TRUE)
 
 ##========================================================================
 ## Section is redundant now:
@@ -70,11 +70,12 @@ significant_de_counts_df <- as.data.frame(significant_de_counts)
 #rm(genes_for_heatmap_LOC)
 ##========================================================================
 # Add sample numbers to columns: 
-new_sample_names <- gsub(x = colnames(significant_de_counts_df), pattern = "-C.*", replacement = "")
+# Add sample numbers to columns: 
+#new_sample_names <- gsub(x = colnames(significant_de_counts_df), pattern = "-C.*", replacement = "")
+#new_sample_names <- paste(new_sample_names, +rep(1:4,2), sep="_")
+new_sample_names <- c(1:4,5:8,9:12)
 
-new_sample_names <- paste(new_sample_names, +rep(1:4,2), sep="_")
-
-## rename column names:
+## Rename column names:
 colnames(significant_de_counts_df) <- new_sample_names
 
 ## Add rownames with gene descriptions:
@@ -105,39 +106,130 @@ We plot heatmap using normalised counts as input into ggplot2.
 
 ```{r}
 ## Reorder "gene_name" for plotting:
-significant_de_counts_df_reordered_melt$gene_name<- 
-        factor(significant_de_counts_df_reordered_melt$gene_name, levels=rev(c(as.character(unlist(significant_de_counts_df_reordered_melt$gene_name)))))
+significant_de_counts_df_reordered_melt$gene_name <- 
+        factor(significant_de_counts_df_reordered_melt$gene_name, levels = rev(unique(c(as.character(unlist(significant_de_counts_df_reordered_melt$gene_name))))))
+
+significant_de_counts_df_reordered_melt$treatment <- rep(c("Clothianidin", "Control", "Imidacloprid"), each = 44)
 
 ## Plot heatmap:
-heatmap_plot <- ggplot(significant_de_counts_df_reordered_melt, aes(sample, gene_name)) +
+heatmap_plot_workers <- ggplot(significant_de_counts_df_reordered_melt, aes(sample, gene_name)) +
                 geom_tile(aes(fill = normalised_counts)) +
                 geom_vline(xintercept = c(4.5, 8.5)) +
                 geom_hline(yintercept = c(32.5, 33.5)) + 
                 scale_fill_gradient2(low = "black", mid = "white", high = "red") +
-                xlab("Samples") +
                 ylab("") +
-                theme(legend.title = element_text(size = 15, face = "bold"),
-                      legend.text = element_text(size = 15, face = "bold"),
-                      axis.text.x = element_text(angle = 45, hjust = 1, size = 8, face = "bold"),
-                      axis.text.y = element_text(size = 8, face = "bold"),
-                      axis.title = element_text(size = 14,face = "bold"),
+                xlab("") +
+                theme(legend.title = element_text(size = 20, face = "bold"),
+                      legend.text = element_text(size = 20, face = "bold"),
+                      axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+                      axis.text.y = element_text(size = 16, face = "bold"),
+                      axis.title = element_text(size = 19,face = "bold"),
                       panel.grid.major = element_blank(),
                       panel.grid.minor = element_blank(),
-                      panel.background = element_blank()) +
-                theme(legend.position = "top") +
-                scale_y_discrete(position = "right") 
+                      panel.background = element_blank(),
+                      legend.position = "top") +
+                scale_y_discrete(position = "right") +
+                labs(fill = 'Log fold change')  
+               # geom_text(x = 2.5, y = -0.5, label = "Clothianidin", size = 6, fontface = "bold") +
+              #  geom_text(x = 6.5, y = -0.5, label = "Control", size = 6, fontface = "bold") +
+              #  geom_text(x = 10.5, y = -0.5, label = "Imidacloprid", size = 6, fontface = "bold") 
+
+heatmap_plot_workers <- ggplotGrob(heatmap_plot_workers)
+heatmap_plot_workers$layout$clip[heatmap_plot_workers$layout$name=="panel"] <- "off"
 
 ## Print to console:
-heatmap_plot
+grid.draw(heatmap_plot_workers)
 ```
 
-Step Four: Save heatmap to output.   
-
+# Run for queens
 ```{r}
-tiff("results/graphical_representation/de_genes_heatmap.tiff", width = 15, height = 7, units = 'in', res = 200)
-heatmap_plot
-dev.off()
+## Reload data
+load("input/queens/graphical_representation/txi_counts.Rdata")
+load("input/queens/graphical_representation/deseq_object.Rdata")
+load("input/queens/graphical_representation/de_genes_CLO.RData")
+
+## Normalise counts: 
+normalised_counts_df <- t(scale(t(txi_counts$counts), center = TRUE, scale = TRUE))
+
+## Select significant gene counts
+significant_de_counts <- normalised_counts_df[de_genes_CLO,]
+
+## Convert significant counts into a dataframe:
+significant_de_counts_df <- as.data.frame(significant_de_counts)
+
+## Import txt file with gene descriptions
+genes_for_heatmap <- read.table("./input/queens/graphical_representation/de_genes_for_heatmap.txt", header = FALSE, sep = "\t", fill = TRUE)
+
+# Add sample numbers to columns: 
+new_sample_names <- c(1:4,5:8,9:12)
+
+## Rename column names:
+colnames(significant_de_counts_df) <- new_sample_names
+
+## Add rownames with gene descriptions:
+rownames(significant_de_counts_df) <- genes_for_heatmap$V1
+
+significant_de_counts_df$gene_name <- rownames(significant_de_counts_df)
+
+## Calculate eucleidean distance between rows:
+dd<-hclust(dist(as.matrix(significant_de_counts_df[,1:12])))
+
+## Reorder based on cluster order:
+significant_de_counts_df_reordered <- as.data.frame(significant_de_counts_df[dd$order, ])
+
+## Melt dataframe:
+significant_de_counts_df_reordered_melt <- melt(significant_de_counts_df_reordered)
+
+## Rename columns:
+colnames(significant_de_counts_df_reordered_melt) <- c("gene_name", "sample", "normalised_counts")
+
+
+## Reorder "gene_name" for plotting:
+significant_de_counts_df_reordered_melt$gene_name <- 
+        factor(significant_de_counts_df_reordered_melt$gene_name, levels = rev(unique(c(as.character(unlist(significant_de_counts_df_reordered_melt$gene_name))))))
+
+## Plot heatmap:
+heatmap_plot_queens <- ggplot(significant_de_counts_df_reordered_melt, aes(sample, gene_name)) +
+                geom_tile(aes(fill = normalised_counts)) +
+                geom_vline(xintercept = c(4.5, 8.5)) +
+                geom_hline(yintercept = c(32.5, 33.5)) + 
+                scale_fill_gradient2(low = "black", mid = "white", high = "red") +
+                xlab("") +
+                ylab("") +
+                theme(legend.title = element_text(size = 20, face = "bold"),
+                      legend.text = element_text(size = 20, face = "bold"),
+                      axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+                      axis.text.y = element_text(size = 16, face = "bold"),
+                      axis.title = element_text(size = 19,face = "bold"),
+                      panel.grid.major = element_blank(),
+                      panel.grid.minor = element_blank(),
+                      panel.background = element_blank(),
+                      legend.position = "none") +
+                scale_y_discrete(position = "right") +
+                labs(fill = 'Log fold change')  +
+                geom_text(x = 2.5, y = -0.35, label = "Clothianidin", size = 7, fontface = "bold") +
+                geom_text(x = 6.5, y = -0.35, label = "Control", size = 7, fontface = "bold") +
+                geom_text(x = 10.5, y = -0.35, label = "Imidacloprid", size = 7, fontface = "bold") 
+
+heatmap_plot_queens <- ggplotGrob(heatmap_plot_queens)
+heatmap_plot_queens$layout$clip[heatmap_plot_queens$layout$name=="panel"] <- "off"
+
+## Print to console:
+grid.draw(heatmap_plot_queens)
+
 ```
+Step Four: Save heatmap to output.  
+# Arrange both plots together
+```{r}
+tiff("results/de_genes_workers_queens_heatmap.tiff", width = 23, height = 22, units = "in", res = 200)
 
+grid.draw(ggarrange(heatmap_plot_workers, heatmap_plot_queens, 
+                    ncol = 1, nrow = 2,
+                    align = "v",
+                    labels = c("a", "b"), vjust = 1.1,
+                    font.label = list(size = 30)))
 
+dev.off()
+
+```
 
