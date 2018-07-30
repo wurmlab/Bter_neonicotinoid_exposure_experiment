@@ -29,74 +29,133 @@ for (lib in libraries) {
 ## Step One: Load input files
 ```{r}
 ### Worker GO analyses
-worker <- read.csv("input/DESEq/worker_clothianidin.csv", header = TRUE)
-worker$category <- factor(worker$category)
+worker_dexseq <- read.csv("input/dexseq/worker_clo.csv", header = TRUE)
+worker_dexseq$Category <- factor(worker_dexseq$Category)
 
-# Set order of GO categories to plot
-levels(worker$category) <- c("BP", "MF", "CC")
+worker_deseq <- read.csv("input/deseq/worker_clo.csv", header = TRUE)
+worker_deseq$Category <- factor(worker_deseq$Category)
+
+# Set order of GO categories to plot and replace into full categories
+levels(worker_dexseq$Category) <- c("Biological process", "Molecular function")
+levels(worker_deseq$Category) <- c("Biological process", "Molecular function", "Cellular component")
 
 # Round p values to plot
-worker$weight_ks <- round(worker$weight_ks, digits = 3)
+worker_dexseq$weight_ks <- round(worker_dexseq$weight_ks, digits = 3)
+worker_deseq$weight_ks <- round(worker_deseq$weight_ks, digits = 3)
+
+# Log p values for plotting 
+worker_dexseq$weight_ks <- -log(worker_dexseq$weight_ks)
+worker_deseq$weight_ks <- -log(worker_deseq$weight_ks)
 
 ### Queen GO analyses
-queen <- read.csv("input/DESEq/queen_clothianidin.csv", header = TRUE)
-queen$category <- factor(queen$category)
+queen <- read.csv("input/deseq/queen_clo.csv", header = TRUE)
+queen$Category <- factor(queen$Category)
 
 # Set order of GO categories to plot
-levels(queen$category) <- c("BP", "MF", "CC")
+levels(queen$Category) <- c("Biological process", "Molecular function", "Cellular component")
 
 # Round p values to plot
 queen$weight_ks <- round(queen$weight_ks, digits = 3)
 
+# Log p-values for plotting
+queen$weight_ks <- -log(queen$weight_ks)
 ```
 
 ## Step Two: Plot a barchart of GO terms and number of genes, for both worker and queen GO analyses, with significance values (ks tests)
 ```{r}
-# Reorder terms for plotting in categories
-worker$Term <- factor(worker$Term, levels = worker$Term[order(worker$category, worker$Significant)])
+# Reorder terms for plotting 
+worker_dexseq$Term <- factor(worker_dexseq$Term, levels = worker_dexseq$Term[order(worker_dexseq$Category, worker_dexseq$weight_ks)])
+worker_deseq$Term <- factor(worker_deseq$Term, levels = worker_deseq$Term[order(worker_deseq$Category, worker_deseq$weight_ks)])
+queen$Term <- factor(queen$Term, levels = queen$Term[order(queen$Category, queen$weight_ks)])
 
-worker_plot <- ggplot(worker, aes(x = Term, y = Significant, fill = category)) +
-  geom_bar(stat = "identity", width = 0.5) +
-  geom_text(aes(label = weight_ks), hjust = -0.1, size = 3) +
-  coord_flip() +
-  scale_fill_manual(values = c("lightblue", "gold", "darkseagreen")) +
-  labs(x = "", y = "") +
-  scale_y_continuous(expand = c(0,0)) +
-  expand_limits(y = 130) +
-  theme(axis.text.x = element_text(hjust = 1, size = 10),
-        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        panel.background = element_blank(), axis.line = element_line(colour = "black"),
-        legend.title = element_blank(),
-        axis.text.y = element_text(size = 12),
-        axis.title.y = element_text(size = 12, face = "bold"),
-        axis.title.x = element_text(size = 12, face = "bold")) 
+# Plot for workers
+worker_deseq_plot <- ggbarplot(worker_deseq, x = "Term", y = "weight_ks", fill = "Category", color = "white",
+              palette = "jco", ylab = "", xlab = "", width = 0.5, legend = "top") +
+              font("y.text", size = 14) +
+              font("x.text", size = 14) +
+              font("x", size = 20, face = "bold") +
+              font("y", size = 22, face = "bold") +
+              font("legend.title", size = 20, face = "bold") +
+              font("legend.text", size = 18) +
+              scale_y_continuous(expand = c(0,0)) +
+              geom_text(aes(label = Significant), hjust = -0.1, size = 4.5) +
+              expand_limits(y = 6.5) +
+              rotate() +
+              theme(panel.spacing = unit(1.5, "lines"))
 
-# Reorder terms for plotting in categories
-queen$Term <- factor(queen$Term, levels = queen$Term[order(queen$category, queen$Significant)])
+worker_dexseq_plot <- ggbarplot(worker_dexseq, x = "Term", y = "weight_ks", fill = "Category", color = "white",
+              palette = "jco", ylab = "-log p-value", xlab = "", width = 0.5, legend = "none") +
+              font("y.text", size = 14) +
+              font("x.text", size = 14) +
+              font("x", size = 20, face = "bold") +
+              font("y", size = 22, face = "bold") +
+              font("legend.title", size = 20, face = "bold") +
+              font("legend.text", size = 18) +
+              scale_y_continuous(expand = c(0,0)) +
+              geom_text(aes(label = Significant), hjust = -0.1, size = 4.5) +
+              expand_limits(y = 6.5) +
+              rotate() +
+              theme(panel.spacing = unit(1.5, "lines"))
 
-queen_plot <- ggplot(queen, aes(x = Term, y = Significant, fill = category)) +
-  geom_bar(stat = "identity", width = 0.5) +
-  geom_text(aes(label = weight_ks), hjust = -0.1, size = 3) +
-  coord_flip() +
-  scale_fill_manual(values = c("lightblue", "gold", "darkseagreen")) +
-  labs(x = "", y = "Number of genes") +
-  scale_y_continuous(expand = c(0,0)) +
-  expand_limits(y = 40) +
-  theme(axis.text.x = element_text(hjust = 1, size = 10),
-        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        panel.background = element_blank(), axis.line = element_line(colour = "black"),
-        legend.title=element_blank(),
-        axis.text.y = element_text(size = 12),
-        axis.title.y = element_text(size = 12, face = "bold"),
-        axis.title.x = element_text(size = 12, face = "bold")) 
 
-## Plot both queens and workers together
-tiff("output/DESeq_go.tiff", width = 11, height = 8, units = 'in', res = 300)
+# Plot for queens
+queen_plot <- ggbarplot(queen, x = "Term", y = "weight_ks", fill = "Category", color = "white",
+              palette = "jco", ylab = "", width = 0.5, legend = "none") +
+              xlab("Term") +
+              font("y.text", size = 14) +
+              font("x.text", size = 14) +
+              font("x", size = 20, face = "bold") +
+              font("y", size = 22, face = "bold") +
+              font("legend.title", size = 20, face = "bold") +
+              font("legend.text", size = 18) +
+              scale_y_continuous(expand = c(0,0)) +
+              geom_text(aes(label = Significant), hjust = -0.1, size = 4.5) +
+              expand_limits(y = 6.5) +
+              rotate() +
+              theme(panel.spacing = unit(1.5, "lines"))
+```
 
-ggarrange(worker_plot, queen_plot,
-            nrow = 2, ncol = 1, common.legend = TRUE, legend = "right",
-          labels = c("a", "b"), align = "hv")
+## Step Three: Arrange into a single figure
+```{r}
+png("output/clothianidin_go.png", width = 12, height = 15, units = 'in', res = 500)
 
-dev.off() 
+ggarrange(worker_deseq_plot, queen_plot, worker_dexseq_plot,
+            nrow = 3, ncol = 1, common.legend = TRUE, legend = "top",
+          labels = c("a", "b", "c"), font.label = list(size = 20), 
+          align = "hv")
+
+dev.off()
 
 ```
+
+## Arrange into three separate figures for setting same bar width
+```{r}
+png("output/go_worker_deseq.png", width = 14, height = 7, units = 'in', res = 500)
+worker_deseq_plot
+dev.off()
+
+png("output/go_worker_dexseq.png", width = 14, height = 7, units = 'in', res = 500)
+worker_dexseq_plot
+dev.off()
+
+png("output/go_queen.png", width = 14, height = 7, units = 'in', res = 500)
+queen_plot
+dev.off()
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
