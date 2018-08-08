@@ -68,6 +68,11 @@ worker_dexseq$Term <- factor(worker_dexseq$Term, levels = worker_dexseq$Term[ord
 worker_deseq$Term <- factor(worker_deseq$Term, levels = worker_deseq$Term[order(worker_deseq$Category, worker_deseq$weight_ks)])
 queen$Term <- factor(queen$Term, levels = queen$Term[order(queen$Category, queen$weight_ks)])
 
+## For plotting queen, update GO term names to include total number of annotated terms:
+worker_deseq$updated_terms <- paste(worker_deseq$Term, " ", "(", worker_deseq$Annotated, ")", sep="")
+worker_dexseq$updated_terms <- paste(worker_dexseq$Term, " ", "(", worker_dexseq$Annotated, ")", sep="")
+queen$updated_terms <- paste(queen$Term, " ", "(", queen$Annotated, ")", sep="")
+
 # Plot for workers
 worker_deseq_plot <- ggbarplot(worker_deseq, x = "Term", y = "weight_ks", fill = "Category", color = "white",
               palette = "jco", ylab = "", xlab = "", width = 0.5, legend = "top") +
@@ -113,6 +118,60 @@ queen_plot <- ggbarplot(queen, x = "Term", y = "weight_ks", fill = "Category", c
               expand_limits(y = 6.5) +
               rotate() +
               theme(panel.spacing = unit(1.5, "lines"))
+```
+Add a function to plot GO graphs:
+
+```{r}
+## Create a function called go_term_plotter, which will
+## take in an input dataframe and use three columns for plotting of
+## x-axis, y-axis and the colour of the bars:
+go_term_plotter <- function(input, term_1, term_2, term_3){
+        output_plot <- ggbarplot(input, x = term_1, y = term_2,
+                      position = position_dodge(0.1),
+                      fill = term_3,# change fill color by mpg_level
+                      color = NULL, #"white"            # Set bar border colors to white
+                      palette = "jco",# jco journal color palett. see ?ggpar
+                      sort.val = "asc",          # Sort the value in descending order
+                      sort.by.groups = TRUE,     # Don't sort inside each group
+                      ylab = "-log10(p)",
+                      xlab = "Gene ontology term",
+                      legend.title = "Gene ontology",
+                      lab.col = "black",
+                      lab.size = 4,
+                      lab.vjust = 0.5,
+                      lab.hjust = 1,
+                      legend = "top",
+                      rotate = TRUE,
+                      ggtheme = theme_minimal()
+)
+
+
+## Make the axes labels bigger:
+output_plot <- output_plot +
+        scale_y_continuous(expand = c(0, 0)) +
+        theme(axis.text=element_text(size=15),
+              axis.title.x = element_text(size=15,face="bold"),
+              axis.title.y = element_text(size=15,face="bold"),
+              axis.text.y = element_text(size=12, face="bold"),
+              axis.text.x = element_text(size=12),
+              legend.position="none") +
+        expand_limits(y = 6.5) +
+        geom_hline(yintercept = 1.301, linetype="dashed", colour="black")
+
+## Update colours for plotting
+output_plot<- output_plot + 
+        scale_fill_manual(values = c("orange", 
+                                     "light blue", 
+                                     "light grey"))
+print(output_plot)
+}
+
+## Call function:
+go_term_plotter(worker_deseq, "updated_terms", "weight_ks", "Category")
+
+go_term_plotter(queen, "updated_terms", "weight_ks", "Category")
+
+go_term_plotter(worker_dexseq, "updated_terms", "weight_ks", "Category")
 ```
 
 ## Step Three: Arrange into a single figure
