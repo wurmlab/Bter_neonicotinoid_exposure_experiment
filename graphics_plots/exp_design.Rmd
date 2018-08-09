@@ -1,0 +1,72 @@
+---
+title: "exp_design"
+author: "Isabel Fletcher"
+date: "09/08/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(ggplot2):library(remotes):library(png):library(RCurl)
+remotes::install_github("sckott/rphylopic")
+library(rphylopic)
+```
+
+## Find bee image
+```{r}
+bee_url <- "http://phylopic.org/assets/images/submissions/750eeb4f-7ca5-49ff-a814-27a12d0cb13a.512.png"
+
+bee <- readPNG(getURLContent(bee_url))
+
+```
+
+## Code experimental design
+```{r}
+time <- c(0, 0,7, 7, 10, 10, 0, 0,7, 7, 10, 10)
+treatment <- c(0,1, 1, 0, 1, 0, 0,1, 1, 0, 1, 0)
+caste <- c("worker", "worker", "worker", "worker", "worker", "worker", "queen", "queen", "queen", "queen",
+           "queen", "queen")
+
+exp_design <- as.data.frame(cbind(time, treatment))
+
+```
+
+## Plot 
+```{r}
+p <- ggplot(exp_design, aes(time, treatment, fill = )) +
+      geom_blank() +
+   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+   panel.background = element_blank(), axis.line = element_blank(),
+   panel.border = element_rect(colour = "black", fill = NA, size = 0.5),
+   axis.text.x = element_text(size=16),
+   axis.title.x = element_text(size=18),
+   axis.text.y = element_text(size=20)) +
+   scale_x_continuous(name = "Days", 
+                    breaks = c(0,1,2,3,4,5,6,7,8,9,10),
+                    limits = c(-5, 15)) +
+   scale_y_continuous(name = "",
+                      breaks = c(0,1),
+                      limits = c(-0.5, 1.5),
+                      labels = c("Control", "Pesticide")) +
+  geom_vline(xintercept = 6, linetype="dashed", 
+                color = "red", size=0.7) +
+  geom_vline(xintercept = 10, 
+                color = "grey", size=1)
+
+## Add bee image as points
+
+for (i in 1:nrow(exp_design)) {
+  p <- p + add_phylopic(bee, 1, exp_design$time[i], exp_design$treatment[i], ysize = 1.5)
+}
+
+p
+```
+
+## Save to wd
+```{r}
+pdf(file="exp_design.pdf", height = 4, width = 5) 
+p
+dev.off()
+```
+
