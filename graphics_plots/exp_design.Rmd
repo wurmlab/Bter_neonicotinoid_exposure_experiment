@@ -13,7 +13,7 @@ remotes::install_github("sckott/rphylopic")
 library(rphylopic)
 ```
 
-## Find bee image
+## Download bee image from Phylopic
 ```{r}
 bee_url <- "http://phylopic.org/assets/images/submissions/750eeb4f-7ca5-49ff-a814-27a12d0cb13a.512.png"
 
