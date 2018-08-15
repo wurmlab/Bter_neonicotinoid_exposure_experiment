@@ -1,0 +1,228 @@
+---
+title: "exp_design"
+author: "Isabel Fletcher"
+date: "09/08/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(ggplot2):library(remotes):library(png):library(RCurl)
+remotes::install_github("sckott/rphylopic")
+library(rphylopic)
+```
+
+## Download bee image from Phylopic
+```{r}
+bee_url <- "http://phylopic.org/assets/images/submissions/750eeb4f-7ca5-49ff-a814-27a12d0cb13a.512.png"
+
+bee <- readPNG(getURLContent(bee_url))
+
+```
+
+## Code experimental design
+```{r}
+time      <- c(0, 0, 6, 6, 10, 10)
+treatment <- c(0, 1, 1, 0, 1, 0)
+
+exp_design <- as.data.frame(cbind(time, treatment))
+
+```
+
+## Plot 
+```{r}
+p1 <- ggplot(exp_design, aes(time, treatment)) +
+      geom_blank() +
+   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+   panel.background = element_blank(), axis.line = element_blank(),
+   panel.border = element_rect(colour = "black", fill = NA, size = 0.5),
+   axis.text.x = element_text(size = 16),
+   axis.title.x = element_text(size = 18),
+   axis.text.y = element_text(size = 20)) +
+   scale_x_continuous(name = "Days", 
+                    breaks = c(0,1,2,3,4,5,6,7,8,9,10),
+                    limits = c(-5, 15)) +
+   scale_y_continuous(name = "",
+                      breaks = c(0,1),
+                      limits = c(-0.5, 1.5),
+                      labels = c("Control", "Pesticide")) +
+  # Add vertical lines to annotate experiment time points
+  geom_vline(xintercept = 0, 
+                color = "grey", size = 0.7) +
+  annotate("text", x = 0, y = 1.3, label = "Day of eclosion") +
+  geom_vline(xintercept = 6,
+                color = "red", size = 0.7) +
+  annotate("text", x = 6, y = 1.3, label = "Start of exposure") +
+  geom_vline(xintercept = 10, 
+                color = "grey", size = 1) +
+  annotate("text", x = 10, y = 1.3, label = "End of exposure")
+
+## Add bee image as points
+
+for (i in 1:nrow(exp_design)) {
+  p1 <- p1 + add_phylopic(bee, 1, exp_design$time[i], exp_design$treatment[i], ysize = 1.5)
+}
+
+p1
+```
+
+## Save to wd
+```{r}
+pdf(file="exp_design.pdf", height = 4, width = 5) 
+p1
+dev.off()
+```
+
+## Plot 2
+```{r}
+p2 <- ggplot(exp_design, aes(time, treatment)) +
+      geom_blank() +
+   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+   panel.background = element_blank(), axis.line = element_blank(),
+   panel.border = element_rect(colour = "black", fill = NA, size = 0.5),
+   axis.text.x = element_text(size = 16),
+   axis.title.x = element_text(size = 18),
+   axis.text.y = element_text(size = 20)) +
+   scale_x_continuous(name = "Days", 
+                    breaks = c(0,1,2,3,4,5,6,7,8,9,10),
+                    limits = c(-5, 15)) +
+   scale_y_continuous(name = "",
+                      breaks = c(0,1),
+                      limits = c(-0.5, 1.5),
+                      labels = c("Control", "Pesticide")) +
+  # Add vertical lines to annotate experiment time points
+  annotate("segment", x = 0, xend = 0, y = -0.3, yend = -0.5, size = 1.5, colour = "grey",
+           arrow = arrow(), alpha = 0.8) +
+  annotate("text", x = 0, y = -0.2, label = "Day of eclosion") +
+  annotate("segment", x = 6, xend = 6, y = -0.3, yend = -0.5, size = 1.5, colour = "grey",
+           arrow = arrow(), alpha = 0.8) +
+  annotate("text", x = 6, y = -0.2, label = "Start of exposure") +
+  annotate("segment", x = 10, xend = 10, y = -0.3, yend = -0.5, size = 1.5, colour = "grey",
+           arrow = arrow(), alpha = 0.8) +
+  annotate("text", x = 10, y = -0.2, label = "End of exposure")
+
+## Add bee image as points
+
+for (i in 1:nrow(exp_design)) {
+  p2 <- p2 + add_phylopic(bee, 1, exp_design$time[i], exp_design$treatment[i], ysize = 1.5)
+}
+
+p2
+
+```
+
+
+## Plot 3 
+```{r}
+p3 <- ggplot(exp_design, aes(time, treatment)) +
+      geom_blank() +
+   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+   panel.background = element_blank(), axis.line = element_blank(),
+   panel.border = element_rect(colour = "black", fill = NA, size = 0.5),
+   axis.text.x = element_text(size = 16),
+   axis.title.x = element_text(size = 18),
+   axis.text.y = element_text(size = 20)) +
+   scale_x_continuous(name = "Days", 
+                    breaks = c(0,1,2,3,4,5,6,7,8,9,10),
+                    limits = c(-5, 15)) +
+   scale_y_continuous(name = "",
+                      breaks = c(0,1),
+                      limits = c(-0.5, 1.5),
+                      labels = c("Control", "Pesticide")) +
+  # Add vertical lines to annotate experiment time points
+  annotate("rect", xmin = 6, xmax = 10, ymin = -0.5, ymax = 1.4, 
+           colour = "red", alpha = 0.2, fill = "red") + 
+  annotate("rect", xmin = 0, xmax = 6, ymin = -0.5, ymax = 1.4, 
+           colour = "blue", alpha = 0.2, fill = "blue") +
+  annotate("text", x = 6, y = 1.5, label = "Start of exposure") +
+  annotate("text", x = 10, y = 1.5, label = "End of exposure") +
+  annotate("text", x = 0, y = 1.5, label = "Day of eclosion") 
+
+## Add bee image as points
+
+for (i in 1:nrow(exp_design)) {
+  p3 <- p3 + add_phylopic(bee, 1, exp_design$time[i], exp_design$treatment[i], ysize = 1.5)
+}
+
+p3
+```
+
+```{r}
+## Code experimental design
+time    <- c(0, 6, 10)
+y_axis  <- rep(1,3)
+
+exp_design <- as.data.frame(cbind(time, y_axis))
+
+```
+
+## Plot 4
+```{r}
+p4 <- ggplot(exp_design, aes(time, y_axis)) +
+      geom_blank() +
+   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+   panel.background = element_blank(), axis.line = element_blank(),
+   panel.border = element_rect(colour = "black", fill = NA, size = 0.5),
+   axis.text.x = element_text(size = 16),
+   axis.title.x = element_text(size = 18),
+   axis.text.y = element_blank(),
+   axis.ticks.y = element_blank()) +
+   scale_x_continuous(name = "Days", 
+                    breaks = c(0,1,2,3,4,5,6,7,8,9,10),
+                    limits = c(-2, 12))  +
+   scale_y_continuous(name = "",
+                    limits = c(0.5, 1.5)) +
+  # Add vertical lines to annotate experiment time points
+  annotate("rect", xmin = 6, xmax = 10, ymin = 0.5, ymax = 1.45, 
+           colour = "red", alpha = 0.2, fill = "red") + 
+  annotate("rect", xmin = 0, xmax = 6, ymin = 0.5, ymax = 1.45, 
+           colour = "blue", alpha = 0.2, fill = "blue") +
+  annotate("text", x = 6, y = 1.5, label = "Start of exposure", size = 5) +
+  annotate("text", x = 10, y = 1.5, label = "End of exposure", size = 5) +
+  annotate("text", x = 0, y = 1.5, label = "Day of eclosion", size = 5) 
+
+## Add bee image as points
+
+for (i in 1:nrow(exp_design)) {
+  p4 <- p4 + add_phylopic(bee, 1, exp_design$time[i], exp_design$y_axis[i], ysize = 1.5)
+}
+
+p4
+```
+
+## Plot 5
+```{r}
+p5 <- ggplot(exp_design, aes(time, y_axis)) +
+      geom_blank() +
+   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+   panel.background = element_blank(), axis.line = element_blank(),
+   panel.border = element_rect(colour = "black", fill = NA, size = 0.5),
+   axis.text.x = element_text(size = 16),
+   axis.title.x = element_text(size = 18),
+   axis.text.y = element_blank(),
+   axis.ticks.y = element_blank()) +
+   scale_x_continuous(name = "Days", 
+                    breaks = c(0,1,2,3,4,5,6,7,8,9,10),
+                    limits = c(-2, 12))  +
+   scale_y_continuous(name = "",
+                    limits = c(0.5, 1.5)) +
+  # Add vertical lines to annotate experiment time points
+  annotate("text", x = 6, y = 1.5, label = "Start of exposure", size = 5) +
+  annotate("text", x = 10, y = 1.5, label = "End of exposure", size = 5) +
+  annotate("text", x = 0, y = 1.5, label = "Day of eclosion", size = 5) +
+  geom_vline(xintercept = 0, 
+                color = "grey", size = 0.5, linetype = "dashed") +
+  geom_vline(xintercept = 6, 
+                color = "grey", size = 0.5, linetype = "dashed") +
+  geom_vline(xintercept = 10, 
+                color = "grey", size = 0.5, linetype = "dashed") +
+
+## Add bee image as points
+
+add_phylopic(bee, alpha = 1, x = 0, y = 1, color = 'blue', ysize = 1.3) +
+  add_phylopic(bee, alpha = 1, x = 6, y = 1, color = 'red', ysize = 1.3)
+
+p5
+```
+

@@ -1,0 +1,107 @@
+--- 
+title: "plot_exp_design"
+--- 
+
+Introduction:
+The purpose of this script is to generate a plot demonstrating the experimental design for the collection of neonicotinoid-exposed bumblebees for the manuscript: Colgan et al. (in prep).
+
+```{r}
+# Load libraries; install from scratch if needed
+libraries <- c("ggplot2", "rphylopic", "EBImage")
+for (lib in libraries) {
+    if (require(package = lib, character.only = TRUE)) {
+        print("Successful")
+    } else {
+        print("Installing")
+        source("https://bioconductor.org/biocLite.R")
+        biocLite(pkgs = lib)
+        library(lib, character.only = TRUE )
+    }
+}
+
+```
+
+Create data for plotting:
+
+```{r}
+## Create data:
+data <- as.character(c(1:10))
+
+exposure <- as.character(c(rep(1.5,4), rep(1.5,6)))
+
+control <- as.character(rep(1,10))
+
+## Create dataframe:
+data_df <- as.data.frame(cbind(data,exposure, control))
+
+## update column names:
+colnames(data_df) <- c("Days", "Exposure", "Control")
+
+##
+insect <- name_search('Bombus terrestris')[[1]]
+bumblebee <- name_search(text = "Bombus terrestris", options = "namebankID")[[1]]
+img <- image_data("750eeb4f-7ca5-49ff-a814-27a12d0cb13a", size = "1024")[[1]]
+
+
+## Reorder levels:
+levels(data_df$Days)<- factor(sort(as.numeric(levels(data_df$Days))))
+
+## Plot image:
+plot <- ggplot(data=data_df, aes(x=Days, y = Exposure)) +
+        geom_point(size=0.5, colour = "red") +
+        #ylim(c(0,3)) +
+        #geom_smooth() +
+        ylab("Treatment") +
+        geom_hline(yintercept = 1, 
+                   size= 1,
+                   linetype="dotted", 
+                   colour="blue") +
+        geom_hline(yintercept = 2, 
+                   size= 1,
+                   linetype="dotted", 
+                   colour="red") +
+        geom_vline(xintercept = 6, 
+                   size= 1,
+                   linetype="dotted", 
+                   colour="black") +
+        geom_point(data= data_df, aes(x=Days, y = Control), size=0.5, colour = "blue") +
+        geom_rect(data=NULL,aes(xmin=0,xmax=6,ymin=-Inf,ymax=Inf),
+                    fill="light blue", alpha=0.05)+
+  geom_rect(data=NULL,aes(xmin=6,xmax=10,ymin=-Inf,ymax=Inf),
+                    fill="pink", alpha=0.05)+
+        theme_minimal() +
+        theme(axis.text = element_text(size = 15, face= "bold"),
+              axis.title.x = element_text(size = 15, face = "bold"),
+              axis.text.y = element_blank(), 
+              axis.title.y =  element_text(size = 15, face = "bold"))
+
+## Add annotation boxes:
+plot <- plot + annotate("rect", xmin = -0.5, xmax = 2.5, ymin = 1.175, ymax = 1.375, colour="black", fill="white")
+plot <- plot + annotate("text", x = 1, y = 1.275, label = "Control treatment", colour = "blue", fontface=2, size=4)
+
+plot <- plot + annotate("rect", xmin = -0.5, xmax = 2.5, ymin = 2.25, ymax = 2.5, colour="black", fill="white")
+
+plot <- plot + annotate("text", x = 1, y = 2.375, label = "Neonicotinoid treatment", colour = "red", fontface = 2, size=4)
+
+plot <- plot + annotate("rect", xmin = 4.5, xmax = 7.5, ymin = 2.25, ymax = 2.5, colour="black", fill="white")
+plot <- plot + annotate("text", x = 6, y = 2.375, label = "Start of exposure period", fontface=2, size=4)
+
+plot <- plot + annotate("rect", xmin = 8.5, xmax = 11.5, ymin = 2.25, ymax = 2.5, colour="black", fill="white")
+plot <- plot + annotate("text", x = 10, y = 2.375, label = "End of exposure period", fontface=2, size=4)
+
+## Add images of bees:
+## 1) Add bees at eclosion:
+plot <- plot + add_phylopic(img, 1, x=0.5, y=1, color="steelblue", ysize = 0.75) 
+plot <- plot + add_phylopic(img, 1, x=0.5, y=2, color="steelblue", ysize = 0.75)
+
+## 2) Add bees at start of exposure experiment:
+plot <- plot + add_phylopic(img, 1, x=6, y=1, color="steelblue", ysize = 0.75) 
+plot <- plot + add_phylopic(img, 1, x=6, y=2, color="purple", ysize = 0.75)
+
+## 3) Add bees at end of exposure experiment:
+plot <- plot + add_phylopic(img, 1, x=10, y=1, color="steelblue", ysize = 1) 
+plot <- plot + add_phylopic(img, 1, x=10, y=2, color="red", ysize = 1)
+
+## Print to console:
+plot
+```
