@@ -1,0 +1,36 @@
+---
+title: "Venn Diagrams From Isabel data"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(venneuler)
+```
+"
+## R Markdown
+
+
+```{r }
+read all 8 tables
+
+genelists_directory <- "~/Google\ Drive/rnaseq/gene_ontology/input/DESeq"
+de_worker_clo <- read.table(file = file.path(genelists_directory, "worker/wald_clo/de_genes_for_topGO.txt"), head=TRUE)
+de_queen_clo  <- read.table(file = file.path(genelists_directory, "queen/de_genes_for_topGO.txt"), head=TRUE)
+de_worker_imi <- read.table(file = file.path(genelists_directory, "worker/wald_imi/de_genes_for_topGO.txt"), head=TRUE)
+
+significant_worker_clo <- subset(de_worker_clo, adjusted_pvalue <= 0.05)$locus
+significant_queen_clo  <- subset(de_queen_clo,  adjusted_pvalue <= 0.05)$locus
+significant_worker_imi <- subset(de_worker_imi, adjusted_pvalue <= 0.05)$locus
+  
+
+venneu <- euler(combinations = list("Worker clothianidin" = significant_worker_clo, 
+                                    "Queen clothianidin" = significant_queen_clo, 
+                                    "Worker\nimidacloprid" = significant_worker_imi ))
+
+plot(venneu,
+  quantities = TRUE,
+  labels = list(font = 18))
+  
+plot(venneu)
+```
