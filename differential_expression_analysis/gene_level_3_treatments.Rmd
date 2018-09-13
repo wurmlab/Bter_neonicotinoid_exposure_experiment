@@ -72,14 +72,27 @@ rm(filenames_tmp, filenames)
 
 ```{r}
 ## Extract sample names and put into df for tximport
-samples_tmp <- gsub(x = paths$kallisto_files, pattern = ".*Bter-", replacement = "")
-samples     <- gsub(x = samples_tmp,          pattern = "-head.*", replacement = "")
-samples     <- data.frame(treatment = samples)
-rownames(samples) <- samples$treatment
-samples$treatment <- gsub(x = samples$treatment ,     pattern = "-.*",     replacement = "")
-samples$treatment <- as.factor(samples$treatment)
-samples$treatment <- relevel(x = samples$treatment, ref = "CON") 
-rm(samples_tmp)
+#samples_tmp <- gsub(x = paths$kallisto_files, pattern = ".*Bter-", replacement = "")
+#samples     <- gsub(x = samples_tmp,          pattern = "-head.*", replacement = "")
+#samples     <- data.frame(treatment = samples)
+#rownames(samples) <- samples$treatment
+#samples$treatment <- gsub(x = samples$treatment ,     pattern = "-.*",     replacement = "")
+#samples$treatment <- as.factor(samples$treatment)
+#samples$treatment <- relevel(x = samples$treatment, ref = "CON") 
+#rm(samples_tmp)
+
+## Read in sample information for room and batch:
+samples_information <- read.table(file="./input/sample_information/room_batch_information_per_sample.txt", header = FALSE)
+
+## Update header information:
+colnames(samples_information) <- c("sample_name", "treatment", "room", "batch")
+rownames(samples_information) <- samples_information$sample_name
+samples_information$sample_name <- NULL
+#samples_information$batch <- as.factor(samples_information$batch)
+
+## Make sure 'CON' is the reference:
+samples_information$treatment <- relevel(x = samples_information$treatment, ref = "CON") 
+
 ```
 
 
@@ -91,7 +104,7 @@ Because we do a gene-level analysis first, transcript abundances are summarised 
 
 ```{r}
 # Read in file corresponding to transcripts to gene ids
-tx2gene <- read.table(file      = "input/differential_expression/rna_and_corresponding_gene_ids.txt", 
+tx2gene <- read.table(file      = "input/summarise_counts_input/rna_and_corresponding_gene_ids.txt", 
                       header    = FALSE, 
                       col.names = c("TXNAME","GENEID")) # i.e., transcript name, gene name
 
@@ -103,7 +116,8 @@ txi_counts <- tximport(paths$kallisto_files,
                        countsFromAbundance = "no")
 
 # Save object for use in other scripts
-save(txi_counts, file = "results/differential_expression/txi_counts.Rdata")
+dir.create(path="results/count_estimates/")
+save(txi_counts, file = "results/count_estimates/txi_count_estimates.Rdata")
 ```
 
 ### Step Four: Run DESeq2 for differential expression analysis:
@@ -120,7 +134,7 @@ Within the present analysis, two questions can be immediately asked:
 ## Construct DESeq data set from txi object and sample information:
 deseq_txi <- DESeqDataSetFromTximport(txi     = txi_counts, 
                                       colData = samples, 
-                                      design  = ~ treatment)
+                                      design  = ~batch + room + treatment)
 ```
 
 # Run DESeq2 (Wald test) for differential expression analysis:
@@ -131,40 +145,60 @@ deseq_txi <- DESeqDataSetFromTximport(txi     = txi_counts,
 ## 4.1) Which genes are differentially expressed within clothianidin-exposed workers in comparison to control?
 ##==================================================================================================================
 ## Perform a pairwise comparison between treatments:
-deseq_object  <- DESeq(deseq_txi, test = "Wald")  
-
-## Extract results for clothianidin vs. control:
-deseq_results_CLO <- results(deseq_object, contrast = c("treatment", "CON", "CLO"))
+deseq_object  <- DESeq(deseq_txi, 
+                       test = "Wald", 
+                       betaPrior = TRUE)
 
 ## Save object for use in generating heatmap(s)
-save(deseq_object, file = "results/differential_expression/deseq_object.Rdata")                                               
+dir.create(path = "results/deseq_wald_object_output/")
+save(deseq_object, file = "results/deseq_wald_object_output/deseq_wald_object.Rdata")
 
-## lfcShrink(), which performs log2 fold change shrinkage for visualization and ranking of genes:
-deseq_results_CLO <- lfcShrink(dds = deseq_object, contrast = c("treatment", "CON", "CLO"), res = deseq_results_CLO)
+## Extract results for clothianidin vs. control:
+deseq_results_CLO_vs_CON <- results(deseq_object, contrast = c("treatment", "CLO", "CON"))                                           
+
+## Convert into a dataframe:
+deseq_results_CLO_vs_CON_df <- as.data.frame(deseq_results_CLO_vs_CON)
 
 # Results table ordered by smallest p value
-deseq_results_CLO_ordered <- deseq_results_CLO[order(deseq_results_CLO$pvalue),]
+deseq_results_CLO_vs_CON_df_ordered <- deseq_results_CLO_vs_CON_df[order(deseq_results_CLO_vs_CON_df$pvalue),]
 
-# No. genes p < 0.05
-deseq_results_CLO_significant <- deseq_results_CLO_ordered[which(deseq_results_CLO_ordered$padj < 0.05), ]
+## Create directory for output:
+dir.create(path = "results/deseq2_clo_raw_output/")
+
+## Save to file:
+write.table(x = deseq_results_CLO_vs_CON_df_ordered, 
+            file ="results/deseq2_clo_raw_output/deseq_results_CLO_vs_CON_raw_corrected_for_batch_room.txt", 
+            sep = "\t",
+            quote = FALSE)
+
+## Subset significant genes:
+deseq_results_CLO_vs_CON_df_ordered_sig <- subset(deseq_results_CLO_vs_CON_df_ordered, padj < 0.05)
+
+## Create directory for output:
+dir.create(path = "./results/deseq2_clo_sig_output/")
+
+## Save to file:
+write.table(x = deseq_results_CLO_vs_CON_df_ordered_sig, 
+            file ="results/deseq2_clo_sig_output/deseq_results_CLO_vs_CON_significant_corrected_for_batch_room.txt", 
+            sep = "\t",
+            quote = FALSE)
 
 # Save significant genes for heatmap input 
-de_genes_CLO <- rownames(deseq_results_CLO_significant)
+de_genes_CLO <- rownames(deseq_results_CLO_vs_CON_df_ordered_sig)
 
-save(de_genes_CLO, file = "input/graphical_representation/de_genes_CLO.RData")
+## Save object for use in generating heatmap(s)
+save(de_genes_CLO, file = "results/deseq2_clo_sig_output/deseq_object_clo_sig_genes.Rdata")
 
 ##-----------------------------------------------------------------------------------------------------------------
 ## 4.1.1) How many and which genes are more/less expressed in clothianidin-exposed workers in comparison to control?
 ##-----------------------------------------------------------------------------------------------------------------
 # Identify genes more highly expressed in CLO group 
-deseq_pairwise_CLO_lfc_high <- deseq_results_CLO_significant[which(deseq_results_CLO_significant$log2FoldChange < 0),] # n = 21
+deseq_results_CLO_vs_CON_df_ordered_sig_high <- subset(deseq_results_CLO_vs_CON_df_ordered_sig, log2FoldChange < 0)
+nrow(deseq_results_CLO_vs_CON_df_ordered_sig_high)
 
 # Identify genes less expressed in CLO group 
-deseq_pairwise_CLO_lfc_low <- deseq_results_CLO_significant[which(deseq_results_CLO_significant$log2FoldChange > 0),] # n = 12
-
-# Export significance values for use in heatmap ordering
-de_genes_significance <- deseq_results_CLO_significant$padj
-save(de_genes_significance, file = "input/graphical_representation/de_genes_significance.RData")
+deseq_results_CLO_vs_CON_df_ordered_sig_low <- subset(deseq_results_CLO_vs_CON_df_ordered_sig, log2FoldChange > 0)
+nrow(deseq_results_CLO_vs_CON_df_ordered_sig_low)
 ```
 
 ```{r}
@@ -172,22 +206,54 @@ save(de_genes_significance, file = "input/graphical_representation/de_genes_sign
 ## 4.2 Which genes are differentially expressed within imidacloprid-exposed workers in comparison to control?
 ##==================================================================================================================
 ## Extract results for imidacloprid vs. control
-deseq_results_IMI <- results(deseq_object, contrast = c("treatment", "CON", "IMI")) 
+deseq_results_IMI_vs_CON <- results(deseq_object, contrast = c("treatment", "CON", "IMI")) 
 
-#lfcShrink(), which performs log2 fold change shrinkage for visualization and ranking of genes:
-deseq_results_IMI <- lfcShrink(dds = deseq_object, contrast = c("treatment", "CON", "IMI"), res = deseq_results_IMI)
+## Convert into a dataframe:
+deseq_results_IMI_vs_CON_df <- as.data.frame(deseq_results_IMI_vs_CON)
+
+# Results table ordered by smallest p value
+deseq_results_IMI_vs_CON_df_ordered <- deseq_results_IMI_vs_CON_df[order(deseq_results_IMI_vs_CON_df$pvalue),]
+
+## Create directory for output:
+dir.create(path = "results/deseq2_imi_raw_output/")
+
+## Save to file:
+write.table(x = deseq_results_IMI_vs_CON_df_ordered, 
+            file ="results/deseq2_imi_raw_output/deseq_results_IMI_vs_CON_raw_corrected_for_batch_room.txt", 
+            sep = "\t",
+            quote = FALSE)
 
 # Results table ordered by smallest p value
 deseq_results_IMI_ordered <- deseq_results_IMI[order(deseq_results_IMI$pvalue),]
 
-# No. genes p < 0.05
-deseq_results_IMI_significant <- deseq_results_IMI_ordered[which(deseq_results_IMI_ordered$padj < 0.05), ] # n = 1
+## Subset significant genes:
+deseq_results_IMI_vs_CON_df_ordered_sig <- subset(deseq_results_IMI_vs_CON_df_ordered, padj < 0.05)
+
+## Create directory for output:
+dir.create(path = "./results/deseq2_imi_sig_output/")
+
+## Save to file:
+write.table(x = deseq_results_IMI_vs_CON_df_ordered_sig, 
+            file ="results/deseq2_imi_sig_output/deseq_results_IMI_vs_CON_significant_corrected_for_batch_room.txt", 
+            sep = "\t",
+            quote = FALSE)
 
 # Save significant genes for heatmap input 
-de_genes_IMI <- rownames(deseq_results_IMI_significant)
+de_genes_IMI <- rownames(deseq_results_IMI_vs_CON_df_ordered_sig)
 
-save(de_genes_IMI, file = "input/graphical_representation/de_genes_IMI.RData")
+## Save object for use in generating heatmap(s)
+save(de_genes_IMI, file = "results/deseq2_imi_sig_output/deseq_object_sig_genes.Rdata")
 
+##-----------------------------------------------------------------------------------------------------------------
+## 4.2.1) How many and which genes are more/less expressed in imidacloprid-exposed workers in comparison to control?
+##-----------------------------------------------------------------------------------------------------------------
+# Identify genes more highly expressed in CLO group 
+deseq_results_IMI_vs_CON_df_ordered_sig_high <- subset(deseq_results_IMI_vs_CON_df_ordered_sig, log2FoldChange < 0)
+nrow(deseq_results_IMI_vs_CON_df_ordered_sig_high)
+
+# Identify genes less expressed in CLO group 
+deseq_results_IMI_vs_CON_df_ordered_sig_low <- subset(deseq_results_IMI_vs_CON_df_ordered_sig, log2FoldChange > 0)
+nrow(deseq_results_IMI_vs_CON_df_ordered_sig_low)    
 ```
 
 ```{r}
@@ -198,17 +264,16 @@ save(de_genes_IMI, file = "input/graphical_representation/de_genes_IMI.RData")
 ## Report results in the generation of boxplots for each statistically significant gene:
 deseq_report <- HTMLReport(shortName = 'RNAseq_analysis_with_DESeq2',
                            title     = 'RNA-seq analysis of differential expressed transcripts using DESeq2',
-                           reportDirectory = "results/tpm_scaled_reports")
+                           reportDirectory = "results/")
 
 ## Publish report:
 publish(deseq_object, deseq_report, pvalueCutoff = 0.05,
         factor = colData(deseq_object)$treatment,
-        reportDir = "results/tpm_scaled_reports")
+        reportDir = "results/")
 
 ## Complete the report:        
 finish(deseq_report)
 ```
-
 
 ### Step Five: Extract results for output for use in GO term analyses.
 For this we need extract the Wald test result adjusted p values.
@@ -216,20 +281,32 @@ For this we need extract the Wald test result adjusted p values.
 ```{r}
 # Extract list of genes from the DESeq objects
 # i) For clothianidin
-de_genes_for_topGO_CLO <- data.frame(locus           = row.names(deseq_results_CLO), 
-                                     adjusted_pvalue = deseq_results_CLO$padj)
+de_genes_for_topGO_CLO <- data.frame(locus      = row.names(deseq_results_CLO_vs_CON_df), 
+                                     raw_pvalue = deseq_results_CLO_vs_CON_df$pvalue)
 
 # ii) For imidacloprid
-de_genes_for_topGO_IMI <- data.frame(locus           = row.names(deseq_results_IMI), 
-                                     adjusted_pvalue = deseq_results_IMI$padj)
+de_genes_for_topGO_IMI <- data.frame(locus      = row.names(deseq_results_IMI_vs_CON_df), 
+                                     raw_pvalue = deseq_results_IMI_vs_CON_df$pvalue)
 # Order by p-values 
-de_genes_for_topGO_CLO <- de_genes_for_topGO_CLO[order(de_genes_for_topGO_CLO$adjusted_pvalue),]
-de_genes_for_topGO_IMI <- de_genes_for_topGO_IMI[order(de_genes_for_topGO_IMI$adjusted_pvalue),]
+de_genes_for_topGO_CLO <- de_genes_for_topGO_CLO[order(de_genes_for_topGO_CLO$pvalue),]
+de_genes_for_topGO_IMI <- de_genes_for_topGO_IMI[order(de_genes_for_topGO_IMI$pvalue),]
 
+## Create directory for output:
+dir.create(path = "./results/input_for_go_term_analysis/wald_clo")
+dir.create(path = "./results/input_for_go_term_analysis/wald_imi")
 
 ## Write to output:
-write.table(de_genes_for_topGO_CLO, file = "input/gene_ontology/wald_clo/de_genes_for_topGO.txt", row.names = FALSE, sep = "\t")
-write.table(de_genes_for_topGO_IMI, file = "input/gene_ontology/wald_imi/de_genes_for_topGO.txt", row.names = FALSE, sep = "\t")
+write.table(de_genes_for_topGO_CLO, 
+            file = "results/input_for_go_term_analysis/wald_clo/de_genes_for_topGO.txt", 
+            row.names = FALSE, 
+            sep = "\t",
+            quote = FALSE)
+
+write.table(de_genes_for_topGO_IMI, 
+            file = "results/input_for_go_term_analysis/wald_imi/de_genes_for_topGO.txt", 
+            row.names = FALSE, 
+            sep = "\t",
+            quote = FALSE)
 ```
 
 ### Step Six: Principal Components Analysis
