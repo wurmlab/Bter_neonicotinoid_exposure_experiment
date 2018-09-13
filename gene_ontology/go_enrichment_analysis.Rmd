@@ -43,7 +43,7 @@ Load in genelist and database files.
 ```{r}
 ## Step One
 ## GO annotations
-gene_to_go_mapping_file <- "input/bter_drosophila_orthologues_go_term_database_for_topgo.txt"
+gene_to_go_mapping_file <- "input/go_term_database_input/dmel_vs_bter_biomart.input_for_converter.output.txt"
 
 ## file of significant genes (2 column file: i.e. gene id and pvalue) file:
 de_genes_file <- "input/de_genes_for_topGO.txt"
@@ -105,7 +105,7 @@ for (go_category in c("BP", "MF", "CC")) {
                     allGenes    = topgo_genelist,
                     gene2GO     = gene_to_go_mapping,
                     annot       = annFUN.gene2GO,
-                    nodeSize    = 50) # Modify to reduce/increase stringency.
+                    nodeSize    = 100) # Modify to reduce/increase stringency.
   
   # STEP THREE
   ## Calculate ks test using 'weight01' algorithm:
@@ -125,6 +125,12 @@ for (go_category in c("BP", "MF", "CC")) {
                                    orderBy       = "weight_ks",
                                    topNodes      = length(score(result_weight_ks)))
   
+  ## Correct ks test for multiple testing:
+  result_weight_output$weight_ks <- as.numeric(result_weight_output$weight_ks)
+  result_weight_output$weight_fisher <- as.numeric(result_weight_output$weight_fisher)
+  result_weight_output$weight_ks_adjusted <- p.adjust(p=result_weight_output$weight_ks, method = c("fdr"))
+  result_weight_output$weight_fisher_adjusted <- p.adjust(p=result_weight_output$weight_fisher, method = c("fdr"))
+  
   ## Subset calls with significance higher than expected:
   result_weight_output_sig <- subset(x      = result_weight_output,
                                      subset = (Significant > Expected) & (weight_ks < 0.05))
@@ -134,6 +140,19 @@ for (go_category in c("BP", "MF", "CC")) {
                          whichGO = head(result_weight_output_sig$GO.ID, n = 1),
                          ranks   = TRUE,
                          rm.one  = FALSE))
+                         
+  ## Write to output:
+  write.table(x         = result_weight_output_sig,
+              file      = file.path(output_directory,
+                                    paste(go_category, "sig.tsv", sep = "_")),
+              row.names = FALSE,
+              quote = FALSE,
+              sep       = "\t")
+}
+
+```
+
+```{r}
   ## Print out all GO terms of interest:
   for (go_term in 1:nrow(result_weight_output_sig)){
           output_name <- head(result_weight_output_sig$GO.ID, n = go_term)
@@ -145,12 +164,4 @@ for (go_category in c("BP", "MF", "CC")) {
                          rm.one  = FALSE))
           dev.off
   }
-  ## Write to output:
-  write.table(x         = result_weight_output_sig,
-              file      = file.path(output_directory,
-                                    paste(go_category, "sig.tsv", sep = "_")),
-              row.names = FALSE,
-              sep       = "\t")
-}
-
-```
+  ```
