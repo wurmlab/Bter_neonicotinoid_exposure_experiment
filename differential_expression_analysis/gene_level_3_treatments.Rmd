@@ -193,11 +193,11 @@ save(de_genes_CLO, file = "results/deseq2_clo_sig_output/deseq_object_clo_sig_ge
 ## 4.1.1) How many and which genes are more/less expressed in clothianidin-exposed workers in comparison to control?
 ##-----------------------------------------------------------------------------------------------------------------
 # Identify genes more highly expressed in CLO group 
-deseq_results_CLO_vs_CON_df_ordered_sig_high <- subset(deseq_results_CLO_vs_CON_df_ordered_sig, log2FoldChange < 0)
+deseq_results_CLO_vs_CON_df_ordered_sig_high <- subset(deseq_results_CLO_vs_CON_df_ordered_sig, log2FoldChange > 0)
 nrow(deseq_results_CLO_vs_CON_df_ordered_sig_high)
 
 # Identify genes less expressed in CLO group 
-deseq_results_CLO_vs_CON_df_ordered_sig_low <- subset(deseq_results_CLO_vs_CON_df_ordered_sig, log2FoldChange > 0)
+deseq_results_CLO_vs_CON_df_ordered_sig_low <- subset(deseq_results_CLO_vs_CON_df_ordered_sig, log2FoldChange < 0)
 nrow(deseq_results_CLO_vs_CON_df_ordered_sig_low)
 ```
 
@@ -248,11 +248,11 @@ save(de_genes_IMI, file = "results/deseq2_imi_sig_output/deseq_object_sig_genes.
 ## 4.2.1) How many and which genes are more/less expressed in imidacloprid-exposed workers in comparison to control?
 ##-----------------------------------------------------------------------------------------------------------------
 # Identify genes more highly expressed in CLO group 
-deseq_results_IMI_vs_CON_df_ordered_sig_high <- subset(deseq_results_IMI_vs_CON_df_ordered_sig, log2FoldChange < 0)
+deseq_results_IMI_vs_CON_df_ordered_sig_high <- subset(deseq_results_IMI_vs_CON_df_ordered_sig, log2FoldChange > 0)
 nrow(deseq_results_IMI_vs_CON_df_ordered_sig_high)
 
 # Identify genes less expressed in CLO group 
-deseq_results_IMI_vs_CON_df_ordered_sig_low <- subset(deseq_results_IMI_vs_CON_df_ordered_sig, log2FoldChange > 0)
+deseq_results_IMI_vs_CON_df_ordered_sig_low <- subset(deseq_results_IMI_vs_CON_df_ordered_sig, log2FoldChange < 0)
 nrow(deseq_results_IMI_vs_CON_df_ordered_sig_low)    
 ```
 
