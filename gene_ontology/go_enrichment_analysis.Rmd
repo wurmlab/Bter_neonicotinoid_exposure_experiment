@@ -59,19 +59,19 @@ if (file.exists(output_directory)) {
 ## Read in input file:
 de_genes <- read.table(de_genes_file, header = TRUE)
 
-## Sort by adjusted p-value:
-de_genes_sorted <- de_genes[order(de_genes$adjusted_pvalue), ]
+## Sort by raw p-value:
+de_genes_sorted <- de_genes[order(de_genes$raw_pvalue), ]
 
 ## Remove na values:
 ## NA values are present for certain genes without expression, such as tRNAs:
 de_genes_sorted_filtered <- subset(x      = de_genes_sorted,
-                                   subset = !is.na(adjusted_pvalue))
+                                   subset = !is.na(raw_pvalue))
 
 ## Read in GO annotations:  
 gene_to_go_mapping <- readMappings(file = gene_to_go_mapping_file)
 
 ## Convert into topgo's genelist format:
-topgo_genelist        <- de_genes_sorted_filtered$adjusted_pvalue
+topgo_genelist        <- de_genes_sorted_filtered$raw_pvalue
 names(topgo_genelist) <- de_genes_sorted_filtered$locus
 
 # Define a cut-off for running fisher's exact test:  
