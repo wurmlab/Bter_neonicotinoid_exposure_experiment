@@ -292,8 +292,8 @@ de_genes_for_topGO_CLO <- de_genes_for_topGO_CLO[order(de_genes_for_topGO_CLO$pv
 de_genes_for_topGO_IMI <- de_genes_for_topGO_IMI[order(de_genes_for_topGO_IMI$pvalue),]
 
 ## Create directory for output:
-dir.create(path = "./results/input_for_go_term_analysis/wald_clo")
-dir.create(path = "./results/input_for_go_term_analysis/wald_imi")
+dir.create(path = "./results/input_for_go_term_analysis/wald_clo", recursive = TRUE)
+dir.create(path = "./results/input_for_go_term_analysis/wald_imi", recursive = TRUE)
 
 ## Write to output:
 write.table(de_genes_for_topGO_CLO, 
