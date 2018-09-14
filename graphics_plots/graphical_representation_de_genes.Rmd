@@ -24,15 +24,18 @@ for (lib in libraries) {
 }
 
 # Load R objects from previous script output
-load("input/workers/graphical_representation/txi_counts.Rdata")
-load("input/workers/graphical_representation/deseq_object.Rdata")
-load("input/workers/graphical_representation/de_genes_CLO.RData")
-load("input/workers/graphical_representation/de_genes_IMI.RData")
-load("input/workers/graphical_representation/de_genes_lfc.RData")
+## Load raw count estimates:
+load("results/count_estimates/txi_count_estimates.Rdata")
+## Load deseq2 object containing results of Wald test:
+load("results/deseq_wald_object_output/deseq_wald_object.Rdata")
+## Load significant genes for plotting:
+load("results/deseq2_clo_sig_output/deseq_object_clo_sig_genes.Rdata")
+load("results/deseq2_imi_sig_output/deseq_object_sig_genes.Rdata")
+#load("input/graphical_representation/de_genes_lfc.RData")
 
 ## Assign path for output:
-output <- "results"
-dir.create(output)
+output <- "results/heatmap_figure"
+dir.create(output, recursive = TRUE)
 ```
 
 Step One: Organise data for generating a heatmap:
@@ -43,59 +46,69 @@ We add new annotations for each gene to plot.
 
 ```{r}
 ## Normalise counts: 
-normalised_counts_worker_df <- t(scale(t(txi_counts$counts), center = TRUE, scale = TRUE))
+normalised_counts_df_w <- t(scale(t(txi_counts$counts), center = TRUE, scale = TRUE))
 
 ## Select significant gene counts
-significant_de_counts_worker <- normalised_counts_worker_df[de_genes_CLO,]
+normalised_counts_df_sig_clo_w <- normalised_counts_df_w[de_genes_CLO,]
 
 ## Convert significant counts into a dataframe:
-significant_de_counts_worker_df <- as.data.frame(significant_de_counts_worker)
+normalised_counts_df_sig_clo_w_df <- as.data.frame(normalised_counts_df_sig_clo_w)
+```
 
+```{r}
 ## Import txt file with gene descriptions
-genes_for_heatmap_worker <- read.table("./input/workers/graphical_representation/de_genes_for_heatmap.txt", header = FALSE, sep = "\t", fill = TRUE)
+input_heatmap_CLO_w <- "de_genes_for_heatmap_CLO_workers.txt"
+
+genes_for_heatmap_CLO_w <- read.table(paste("./input/graphical_representation/", input_heatmap_CLO_w, sep=""), header = FALSE, sep = "\t", fill = TRUE)
+
+## Update column names:
+colnames(genes_for_heatmap_CLO_w) <- c("locus", "description")
 
 #new_sample_names <- paste(new_sample_names, +rep(1:4,2), sep="_")
-new_sample_names <- c(paste("Clo", "_",1:4, sep=""),
-                      paste("Con", "_",1:4, sep=""))
+CLO_sample_names_w <- c(paste("CLO", "_",1:4, sep=""),
+                      paste("CON", "_",1:4, sep=""))
 
 ## Remove IMI treatment
-significant_de_counts_worker_df[,9:12] <- NULL
+normalised_counts_df_sig_clo_w_df <- normalised_counts_df_sig_clo_w_df[,1:8]
 
 ## Rename column names:
-colnames(significant_de_counts_worker_df) <- new_sample_names
+colnames(normalised_counts_df_sig_clo_w_df) <- CLO_sample_names_w
 
 ## Add rownames with gene descriptions:
-rownames(significant_de_counts_worker_df) <- genes_for_heatmap_worker$V1
-
-## Create column with gene names:
-significant_de_counts_worker_df$gene_name <- rownames(significant_de_counts_worker_df)
+rownames(normalised_counts_df_sig_clo_w_df) <- genes_for_heatmap_CLO_w$locus
+normalised_counts_df_sig_clo_w_df$description <- paste(genes_for_heatmap_CLO_w$locus, genes_for_heatmap_CLO_w$description, sep=" ")
 ```
 
 Step Two: Calculate clusters based on gene expression across samples:
 
 ```{r}
 ## Calculate eucleidean distance between rows:
-dd<-hclust(dist(as.matrix(significant_de_counts_worker_df[,1:8])))
+dd<-hclust(dist(as.matrix(normalised_counts_df_sig_clo_w_df[,1:8])))
 
 ## Reorder based on cluster order:
-significant_de_counts_worker_df_reordered <- as.data.frame(significant_de_counts_worker_df[dd$order, ])
+normalised_counts_df_sig_clo_w_df_ordered <- as.data.frame(normalised_counts_df_sig_clo_w_df[dd$order, ])
 
 ## Melt dataframe:
-significant_de_counts_worker_df_reordered_melt <- melt(significant_de_counts_worker_df_reordered)
+normalised_counts_df_sig_clo_w_df_ordered_melt <- melt(normalised_counts_df_sig_clo_w_df_ordered)
 
 ## Rename columns:
-colnames(significant_de_counts_worker_df_reordered_melt) <- c("gene_name", "sample", "normalised_counts")
+colnames(normalised_counts_df_sig_clo_w_df_ordered_melt) <- c("gene_name", "sample", "normalised_counts")
 ```
 
 Reorder gene names for plotting
 
 ```{r}
 ## Reorder "gene_name" for plotting:
-significant_de_counts_worker_df_reordered_melt$gene_name <- 
-        factor(significant_de_counts_worker_df_reordered_melt$gene_name, levels = rev(unique(c(as.character(unlist(significant_de_counts_worker_df_reordered_melt$gene_name))))))
+normalised_counts_df_sig_clo_w_df_ordered_melt$gene_name <- 
+        factor(normalised_counts_df_sig_clo_w_df_ordered_melt$gene_name, levels = rev(unique(c(as.character(unlist(normalised_counts_df_sig_clo_w_df_ordered_melt$gene_name))))))
+
+## Define treatments to plot:
+treatment_1 <- "Clothianidin"
+treatment_2 <- "Control"
 
 ## Create a treatment column to plot
-significant_de_counts_worker_df_reordered_melt$treatment <- rep(c("Clothianidin", "Control"), each = 132)
+normalised_counts_df_sig_clo_w_df_ordered_melt$treatment <- rep(c(treatment_1, treatment_2), 
+                                                              each = (nrow(normalised_counts_df_sig_clo_w_df_ordered_melt)/2))
 ```
 
 Step Three: Plot heatmap
@@ -103,7 +116,7 @@ We plot heatmap using normalised counts as input into ggplot2.
 
 ```{r}
 ## Plot heatmap:
-heatmap_plot_workers <- ggplot(significant_de_counts_worker_df_reordered_melt, aes(sample, gene_name)) +
+heatmap_plot_workers <- ggplot(normalised_counts_df_sig_clo_w_df_ordered_melt, aes(sample, gene_name)) +
                 geom_tile(aes(fill = normalised_counts)) +
                 geom_vline(xintercept = c(0.5, 4.5, 8.5)) +
                 #geom_hline(yintercept = c(32.5, 33.5)) + 
@@ -122,70 +135,96 @@ heatmap_plot_workers <- ggplot(significant_de_counts_worker_df_reordered_melt, a
                       legend.position = "top") +
                 scale_y_discrete(position = "right") +
                 labs(fill = 'Log fold change') +
-  theme(axis.text.y = element_text(face = c(rep('plain', 17),'bold', rep("plain", 15)))) 
-#        theme(axis.text.y = element_text(face = c(rep('plain', 18),'bold', rep("plain", 15))))
-
-## What do these steps do???
-#heatmap_plot_workers <- ggplotGrob(heatmap_plot_workers)
-#heatmap_plot_workers$layout$clip[heatmap_plot_workers$layout$name=="panel"] <- "off"
-
-## Print to console and save
-tiff("results/de_genes_workers_heatmap.tiff", width = 15, height = 9, units = "in", res = 200)
-grid.draw(heatmap_plot_workers)
-dev.off()
+  theme(axis.text.y = element_text(face = c(rep('plain', 25),'bold', rep("plain", 20)))) 
 ```
 
-# Run for queens
-```{r}
-## Reload data
-load("input/queens/graphical_representation/txi_counts.Rdata")
-load("input/queens/graphical_representation/deseq_object.Rdata")
-load("input/queens/graphical_representation/de_genes_CLO.RData")
+For plotting the quen data on a second plot:
+Step One: Load in queen data:
 
+```{r}
+# Load R objects from previous script output
+## Load raw count estimates:
+load("results/linked_queen_data/count_estimates/txi_count_estimates.Rdata")
+## Load deseq2 object containing results of Wald test:
+load("results/linked_queen_data/deseq_wald_object_output/deseq_wald_object.Rdata")
+## Load significant genes for plotting:
+load("results/linked_queen_data/deseq2_clo_sig_output/deseq_object_clo_sig_genes.Rdata")
+load("results/linked_queen_data/deseq2_imi_sig_output/deseq_object_sig_genes.Rdata")
+#load("input/graphical_representation/de_genes_lfc.RData")
+```
+Step Two: Organise data for generating a heatmap:
+We load in raw estimated counts from tximport and normalise.  
+We subset genes identified to be differentially expressed by DESeq2. 
+We rename sample names (column names in dataframe) for plotting.
+We add new annotations for each gene to plot. 
+
+```{r}
 ## Normalise counts: 
-normalised_counts_queen_df <- t(scale(t(txi_counts$counts), center = TRUE, scale = TRUE))
+normalised_counts_df_q <- t(scale(t(txi_counts$counts), center = TRUE, scale = TRUE))
 
 ## Select significant gene counts
-significant_de_counts_queens <- normalised_counts_queen_df[de_genes_CLO,]
+normalised_counts_df_sig_clo_q <- normalised_counts_df_q[de_genes_CLO,]
 
 ## Convert significant counts into a dataframe:
-significant_de_counts_queens_df <- as.data.frame(significant_de_counts_queens)
-
+normalised_counts_df_sig_clo_q_df <- as.data.frame(normalised_counts_df_sig_clo_q)
+```
+```{r}
 ## Import txt file with gene descriptions
-genes_for_heatmap_queen <- read.table("./input/queens/graphical_representation/de_genes_for_heatmap.txt", header = FALSE, sep = "\t", fill = TRUE)
+input_heatmap_CLO_q <- "de_genes_for_heatmap_CLO_queens.txt"
 
-# Add sample numbers to columns: 
-#new_sample_names <- c(1:4,5:8)
+genes_for_heatmap_CLO_q <- read.table(paste("./results/linked_queen_data/", input_heatmap_CLO_q, sep=""), header = FALSE, sep = "\t", fill = TRUE)
 
-## Rename column names:
-colnames(significant_de_counts_queens_df) <- new_sample_names
+## Update column names:
+colnames(genes_for_heatmap_CLO_q) <- c("locus", "description")
 
-## Add rownames with gene descriptions:
-rownames(significant_de_counts_queens_df) <- genes_for_heatmap_queen$V1
-
-significant_de_counts_queens_df$gene_name <- rownames(significant_de_counts_queens_df)
+#new_sample_names <- paste(new_sample_names, +rep(1:4,2), sep="_")
+CLO_sample_names_q <- c(paste("CLO", "_",1:4, sep=""),
+                      paste("CON", "_",1:4, sep=""))
 
 ## Remove IMI treatment
-significant_de_counts_queens_df[,9:12] <- NULL
+normalised_counts_df_sig_clo_q_df <- normalised_counts_df_sig_clo_q_df[,1:8]
 
+## Rename column names:
+colnames(normalised_counts_df_sig_clo_q_df) <- CLO_sample_names_q
+
+## Add rownames with gene descriptions:
+rownames(normalised_counts_df_sig_clo_q_df) <- genes_for_heatmap_CLO_q$locus
+normalised_counts_df_sig_clo_q_df$description <- paste(genes_for_heatmap_CLO_q$locus, genes_for_heatmap_CLO_q$description, sep=" ")
+```
+
+```{r}
 ## Calculate eucleidean distance between rows:
-dd<-hclust(dist(as.matrix(significant_de_counts_queens_df[,1:8])))
+dd<-hclust(dist(as.matrix(normalised_counts_df_sig_clo_q_df[,1:8])))
 
 ## Reorder based on cluster order:
-significant_de_counts_queens_df_reordered <- as.data.frame(significant_de_counts_queens_df[dd$order, ])
+normalised_counts_df_sig_clo_q_df_ordered <- as.data.frame(normalised_counts_df_sig_clo_q_df[dd$order, ])
 
 ## Melt dataframe:
-significant_de_counts_queens_df_reordered_melt <- melt(significant_de_counts_queens_df_reordered)
+normalised_counts_df_sig_clo_q_df_ordered_melt <- melt(normalised_counts_df_sig_clo_q_df_ordered)
 
 ## Rename columns:
-colnames(significant_de_counts_queens_df_reordered_melt) <- c("gene_name", "sample", "normalised_counts")
+colnames(normalised_counts_df_sig_clo_q_df_ordered_melt) <- c("gene_name", "sample", "normalised_counts")
+```
+Reorder gene names for plotting
 
+```{r}
 ## Reorder "gene_name" for plotting:
-significant_de_counts_queens_df_reordered_melt$gene_name <- 
-        factor(significant_de_counts_queens_df_reordered_melt$gene_name, levels = rev(unique(c(as.character(unlist(significant_de_counts_queens_df_reordered_melt$gene_name))))))
+normalised_counts_df_sig_clo_q_df_ordered_melt$gene_name <- 
+        factor(normalised_counts_df_sig_clo_q_df_ordered_melt$gene_name, levels = rev(unique(c(as.character(unlist(normalised_counts_df_sig_clo_q_df_ordered_melt$gene_name))))))
 
+## Define treatments to plot:
+treatment_1 <- "Clothianidin"
+treatment_2 <- "Control"
+
+## Create a treatment column to plot
+normalised_counts_df_sig_clo_q_df_ordered_melt$treatment <- rep(c(treatment_1, treatment_2), 
+                                                              each = (nrow(normalised_counts_df_sig_clo_q_df_ordered_melt)/2))
+```
+Step Three: Plot heatmap
+We plot heatmap using normalised counts as input into ggplot2.
+```{r}
 ## Plot heatmap:
-heatmap_plot_queens <- ggplot(significant_de_counts_queens_df_reordered_melt, aes(sample, gene_name)) +
+heatmap_plot_2 <- ggplot(normalised_counts_df_sig_clo_q_df_ordered_melt, aes(sample, gene_name)) +
                 geom_tile(aes(fill = normalised_counts)) +
                 geom_vline(xintercept = c(0.5,4.5, 8.5)) +
                 #geom_hline(yintercept = c(32.5, 33.5)) + 
@@ -204,44 +243,21 @@ heatmap_plot_queens <- ggplot(significant_de_counts_queens_df_reordered_melt, ae
                       panel.background = element_blank(),
                       legend.position = "none") +
                 scale_y_discrete(position = "right") +
-                labs(fill = 'Log fold change') 
-
-# Same as above - this requires annotation!!!
-#heatmap_plot_queens <- ggplotGrob(heatmap_plot_queens)
-#heatmap_plot_queens$layout$clip[heatmap_plot_queens$layout$name=="panel"] <- "off"
-
-## Print to console and save
-tiff("results/de_genes_queens_heatmap.tiff", width = 15, height = 9, units = "in", res = 200)
-grid.draw(heatmap_plot_queens)
-dev.off()
-
+                labs(fill = 'Log fold change') +
+                  theme(axis.text.y = element_text(face = c(rep('plain', 2),'bold', rep("plain", 20))))
 ```
-Step Four: Save heatmap to output.  
-# Arrange both plots together
+
+Plot both worker and queen clothiandin heatmaps together:
+
 ```{r}
-tiff("results/de_genes_workers_queens_heatmap.tiff", width = 23, height = 22, units = "in", res = 200)
-
-## Plot multiple plots:
-figure <- ggarrange(heatmap_plot_workers, heatmap_plot_queens, 
-                    ncol = 1, nrow = 2,
-                    align = "v",
-                    #labels = c("Worker", "Queen"),
-                    #vjust = -0.25,
-                    heights = c(2.5,1),
-                    font.label = list(size = 10))
-
-## Add "Clothianidin" label to the bottom of graph:      
-figure_1 <- annotate_figure(figure,
-               bottom = text_grob("Clothianidin", color = "black", hjust = 4.25, vjust = -0.50)
-)     
-
-## Add "Control" label to the bottom of graph:
-figure_2 <- annotate_figure(figure_1,
-               bottom = text_grob("Control", color = "black", hjust = 2.50, vjust = -2.25)
-)
-
-
-dev.off()
+## Combine plot:
+ggarrange(heatmap_plot_1, heatmap_plot_2,
+                           align = "hv",
+                           nrow = 2, ncol = 1,
+                           heights = c(2.0,1),
+                           common.legend = FALSE,
+                           labels = c("A) Worker", "B) Queen"),
+                           vjust = c(1.4,1.4))
 
 ```
 
