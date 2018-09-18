@@ -26,7 +26,7 @@ for (lib in libraries) {
     } else {
         print("Installing")
         source("https://bioconductor.org/biocLite.R")
-        biocLite(pkgs = lib)
+#        biocLite(pkgs = lib)
         library(lib, character.only = TRUE )
     }
 }
@@ -40,7 +40,8 @@ We use raw, non-normalised estimated counts.
 ```{r} 
 ## Set paths to folders containing output files from kallisto
 paths <- list()
-paths$kallisto_output <- "input/kallisto_quantification"
+paths$sample_batch_info <- "input/room_batch_information_per_sample.txt"
+paths$kallisto_output   <- "input/kallisto_quantification"
 
 # Set relative paths:
 paths$kallisto_files_relative <- grep(x       = list.files(paths$kallisto_output, recursive = TRUE),
@@ -82,7 +83,10 @@ rm(filenames_tmp, filenames)
 #rm(samples_tmp)
 
 ## Read in sample information for room and batch:
-samples_information <- read.table(file="./input/sample_information/room_batch_information_per_sample.txt", header = FALSE)
+samples_information <- read.table(file=
+                                    
+file join ()                                    
+                                    "./input/sample_information/room_batch_information_per_sample.txt", header = FALSE)
 
 ## Update header information:
 colnames(samples_information) <- c("sample_name", "treatment", "room", "batch")
