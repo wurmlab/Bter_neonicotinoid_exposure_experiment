@@ -19,7 +19,7 @@ This can then be used for further analysis.
 ```{r}
 # Load libraries; install from scratch if needed
 libraries <- c("tximport", "readr", "DESeq2", "ggplot2", "gplots", "rhdf5",
-               "plyr", "ggfortify", "ReportingTools", "vsn", "RColorBrewer")
+               "plyr", "ggfortify", "vsn", "RColorBrewer", "ReportingTools")
 for (lib in libraries) {
     if (require(package = lib, character.only = TRUE)) {
         print("Successful")
@@ -40,7 +40,7 @@ We use raw, non-normalised estimated counts.
 ```{r} 
 ## Set paths to folders containing output files from kallisto
 paths <- list()
-paths$sample_batch_info <- "input/room_batch_information_per_sample.txt"
+paths$sample_batch_info <- "input/room_batch_information_per_sample-clean.txt"
 paths$kallisto_output   <- "input/kallisto_quantification"
 
 # Set relative paths:
@@ -51,12 +51,8 @@ paths$kallisto_files <- file.path(paths$kallisto_output,
                                   paths$kallisto_files_relative)
 
 # Automatically extract file names from kallisto output for colnames
-filenames_tmp <- paths$kallisto_files
-filenames_tmp <- gsub(x = filenames_tmp, pattern     = file.path(paths$kallisto_output, "2016-Bter-"), 
-                  replacement = "")
-filenames_tmp <- gsub(x = filenames_tmp, pattern = "-head.+", replacement = "")
-filenames     <- gsub(x = filenames_tmp, pattern = ".*Bter-", replacement = "")
-names(paths$kallisto_files) <- filenames 
+names(paths$kallisto_files) <- gsub(paths$kallisto_files_relative, pattern="/.*", replacement="") 
+
 
 for (filenumber in 1:length(paths$kallisto_files)) {
   current_name <- names(paths$kallisto_files)[filenumber]
@@ -65,7 +61,6 @@ for (filenumber in 1:length(paths$kallisto_files)) {
     kill("we have a problem - names and filenames dont match up")
   }
 }
-rm(filenames_tmp, filenames)
 ```
 
 
@@ -73,29 +68,21 @@ rm(filenames_tmp, filenames)
 
 ```{r}
 ## Extract sample names and put into df for tximport
-#samples_tmp <- gsub(x = paths$kallisto_files, pattern = ".*Bter-", replacement = "")
-#samples     <- gsub(x = samples_tmp,          pattern = "-head.*", replacement = "")
-#samples     <- data.frame(treatment = samples)
-#rownames(samples) <- samples$treatment
-#samples$treatment <- gsub(x = samples$treatment ,     pattern = "-.*",     replacement = "")
-#samples$treatment <- as.factor(samples$treatment)
-#samples$treatment <- relevel(x = samples$treatment, ref = "CON") 
-#rm(samples_tmp)
+samples     <- data.frame(treatment = names(paths$kallisto_files))
 
 ## Read in sample information for room and batch:
-samples_information <- read.table(file=
-                                    
-file join ()                                    
-                                    "./input/sample_information/room_batch_information_per_sample.txt", header = FALSE)
-
-## Update header information:
-colnames(samples_information) <- c("sample_name", "treatment", "room", "batch")
-rownames(samples_information) <- samples_information$sample_name
-samples_information$sample_name <- NULL
-#samples_information$batch <- as.factor(samples_information$batch)
+samples_information <- read.table(file = paths$sample_batch_info,
+                                  header = FALSE, 
+                                  col.names = c("sample_name", "treatment", "room", "batch"),
+                                  row.names = 1)
 
 ## Make sure 'CON' is the reference:
 samples_information$treatment <- relevel(x = samples_information$treatment, ref = "CON") 
+
+# sanity check
+if (FALSE == all(samples$treatment %in% rownames(samples_information))) {
+    kill("we have a problem - sample names from files and from batch descriptor file  dont match up")
+}
 
 ```
 
