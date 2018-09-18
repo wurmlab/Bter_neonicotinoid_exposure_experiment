@@ -19,7 +19,7 @@ This can then be used for further analysis.
 ```{r}
 # Load libraries; install from scratch if needed
 libraries <- c("tximport", "readr", "DESeq2", "ggplot2", "gplots", "rhdf5",
-               "plyr", "ggfortify", "vsn", "RColorBrewer", "ReportingTools")
+               "plyr", "ggfortify", "biomaRt", "vsn", "RColorBrewer", "ReportingTools")
 for (lib in libraries) {
     if (require(package = lib, character.only = TRUE)) {
         print("Successful")
@@ -95,15 +95,16 @@ Because we do a gene-level analysis first, transcript abundances are summarised 
 
 ```{r}
 # Read in file corresponding to transcripts to gene ids
-tx2gene <- read.table(file      = "input/summarise_counts_input/rna_and_corresponding_gene_ids.txt", 
-                      header    = FALSE, 
-                      col.names = c("TXNAME","GENEID")) # i.e., transcript name, gene name
+ensembl <- useMart("metazoa_mart", host = "metazoa.ensembl.org")
+ensembl <- useDataset("bterrestris_eg_gene", mart = ensembl)
+transcript_to_gene <- getBM(attributes = c("ensembl_transcript_id", "ensembl_gene_id"), 
+                            mart = ensembl)
 
 # Use tximport on kallisto files 
 ## Counts are estimated counts from kallisto:
 txi_counts <- tximport(paths$kallisto_files, 
                        type    = "kallisto", 
-                       tx2gene = tx2gene,
+                       tx2gene = transcript_to_gene,
                        countsFromAbundance = "no")
 
 # Save object for use in other scripts
