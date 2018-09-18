@@ -34,10 +34,18 @@ significant_queen_imi  <- read.table(file = file.path(genelists_directory,
                                      head      = FALSE, 
                                      col.names = "ids")$ids
 
-venneu <- euler(combinations = list("Worker clothianidin" = significant_worker_clo, 
-                                    "Queen clothianidin" = significant_queen_clo, 
+worker_splicing_clo    <- read.table(file = file.path(genelists_directory, 
+                                                      "differential_splicing/worker/CLO_vs_CON.ids"), 
+                                     head      = FALSE, 
+                                     col.names = "ids")$ids
+
+
+
+venneu <- euler(combinations = list("Worker\nclothianidin" = significant_worker_clo, 
+                                    "Queen\nclothianidin" = significant_queen_clo, 
                                     "Worker imidacloprid" = significant_worker_imi,
-                                    "Queen imidacloprid" = significant_queen_imi))
+                                    "Queen\nimidacloprid" = significant_queen_imi, 
+                                    "Worker clothianidin\nsplicing" = worker_splicing_clo ))
 
 plot(venneu,
   quantities = TRUE,
