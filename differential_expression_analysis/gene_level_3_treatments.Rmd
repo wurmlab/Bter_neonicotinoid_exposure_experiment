@@ -215,9 +215,6 @@ write.table(x = deseq_results_IMI_vs_CON_df_ordered,
             sep = "\t",
             quote = FALSE)
 
-# Results table ordered by smallest p value
-deseq_results_IMI_ordered <- deseq_results_IMI[order(deseq_results_IMI$pvalue),]
-
 ## Subset significant genes:
 deseq_results_IMI_vs_CON_df_ordered_sig <- subset(deseq_results_IMI_vs_CON_df_ordered, padj < 0.05)
 
@@ -280,8 +277,8 @@ de_genes_for_topGO_CLO <- data.frame(locus      = row.names(deseq_results_CLO_vs
 de_genes_for_topGO_IMI <- data.frame(locus      = row.names(deseq_results_IMI_vs_CON_df), 
                                      raw_pvalue = deseq_results_IMI_vs_CON_df$pvalue)
 # Order by p-values 
-de_genes_for_topGO_CLO <- de_genes_for_topGO_CLO[order(de_genes_for_topGO_CLO$pvalue),]
-de_genes_for_topGO_IMI <- de_genes_for_topGO_IMI[order(de_genes_for_topGO_IMI$pvalue),]
+de_genes_for_topGO_CLO <- de_genes_for_topGO_CLO[order(de_genes_for_topGO_CLO$raw_pvalue),]
+de_genes_for_topGO_IMI <- de_genes_for_topGO_IMI[order(de_genes_for_topGO_IMI$raw_pvalue),]
 
 ## Create directory for output:
 dir.create(path = "./results/input_for_go_term_analysis/wald_clo", recursive = TRUE)
