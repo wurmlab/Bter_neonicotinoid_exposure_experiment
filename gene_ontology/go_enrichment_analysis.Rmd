@@ -43,12 +43,12 @@ Load in genelist and database files.
 ```{r}
 ## Step One
 ## GO annotations
-gene_to_go_mapping_file <- "input/go_term_database_input/dmel_vs_bter_biomart.input_for_converter.output.txt"
+gene_to_go_mapping_file <- "go_term_database_bter_dmel_orthologues_ensembl.txt"
 
 ## file of significant genes (2 column file: i.e. gene id and pvalue) file:
-de_genes_file <- "input/de_genes_for_topGO.txt"
+de_genes_file <- "input/input_for_go_term_analysis/wald_clo/de_genes_for_topGO.txt"
 
-output_directory <- "output"
+output_directory <- "results/output_node_100"
 if (file.exists(output_directory)) {
   stop("The output directory:", output_directory, ", already exists",
        "Let's avoid overwriting")
@@ -134,6 +134,15 @@ for (go_category in c("BP", "MF", "CC")) {
   ## Subset calls with significance higher than expected:
   result_weight_output_sig <- subset(x      = result_weight_output,
                                      subset = (Significant > Expected) & (weight_ks < 0.05))
+                                     
+  ## Update column names:
+  colnames(result_weight_output_sig)[6] <- gsub(" ", "_", colnames(result_weight_output_sig)[6])
+  
+  ## For significant terms, add an additional field called 'category' which will be used for plotting of individual go category:
+  result_weight_output_sig$category <- go_category
+  
+  ## Remove gaps between Terms, which can cause downstream problems:
+  result_weight_output_sig$Term <- gsub(" ", "_", result_weight_output_sig$Term)
   
   ## Print to console one of the GO terms of interest to check the distribution of that GO term across ranked genes:
   print(showGroupDensity(object  = my_go_data,
