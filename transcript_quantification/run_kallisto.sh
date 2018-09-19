@@ -1,64 +1,45 @@
-#### Pool seq samples ####
+#Filenames are like 
+#2016-Bter-CTH-C60-4-W1-head.D711_D506.HM3WHBBXX.s_6.R1.fastq.gz
+#2016-Bter-CYH-C03-4-Q-head.D711_D503.HM3WHBBXX.s_6.R1.fastq.gz 
 
-#pool hiseq with next seq data
+treatments=(CON CLO IMI)
 
-cat 2016-Bter-CON-C61-4-W1-head-54247263.combined.fastq 2016-Bter-CON-C61-4-W1-head-54247263_combined_hiseq.fq > 2016-Bter-CON-C61-4-W1-head-54247263_combined_hiseq_nextseq.fq
 
-#Run fastqc on fastq.gz files
-for gz in .*.gz
-do fastqc "(2016-Bter-CLO-C02-4-W1-head-54242293.combined.fastq.gz)" "$gz"
+###
+mkdir ~/scratch/2018-09-19-kallisto_actualworkers
+ln -s ~/scratch/2018-09-19-kallisto_actualworkers tmp
+
+# indexing
+kallisto_ref=tmp/Bter1_cdna
+./kallisto index -i ${kallisto_ref} input/reference/Bter1_cdna.fa 
+
+
+
+## running for each
+for treatment in $treatments; do
+  echo "running with ${treatment}"
+  fastqs=`ls input/fastq_all/2016-Bter-${treatment}[-_]*-W[0-9]-*gz`
+  colonies=$(echo $fastqs | cut -d '-' -f 4 | sort -u)
+  colonies=($(echo "$colonies"))
+
+  mkdir -p tmp/quant
+  for colony in $colonies; do
+    echo "running with ${colony}"
+    fastqs_for_colony=`echo $fastqs | grep "\-${colony}\-" | tr "\n" " "`
+    output=tmp/quant/${treatment}-${colony}
+    echo "./kallisto quant -i ${kallisto_ref}  --output-dir=${output} --single --fragment-length=300 --sd=20  --threads=35 ${fastqs_for_colony}" >> ./kallisto_commands.sh
+  done
 done
 
-#create link to genomic index 
-wget ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/214/255/GCF_000214255.1_Bter_1.0/GCF_000214255.1_Bter_1.0_cds_from_genomic.fna.gz 
+sh kallisto_commands.sh > kallisto_commands.log  2> kallisto_commands.err
 
-gunzip GCF_000214255.1_Bter_1.0_cds_from_genomic.fna.gz
-
-ln -s ../../ 
-
-ln -s ../../data/GCF_000214255.1_Bter_1.0_cds_from_genomic.fna . 
-
-
-######## RUNNING KALLISTO ##########
-#create an index for kallisto
-kallisto index -i Bter_1.0 GCF_000214255.1_Bter_1.0_rna_from_genomic.fna
-#creates index named 'Bter_1.0'
-
-#run quantification e.g.
-kallisto quant -i Bter_1.0 -o 2016-Bter-CLO_quant_v2 --single -l 300 -s 20 2016-Bter-CON-C61-4-W1-head-54247263_combined_hiseq_nextseq.fq -t 8
-
-#loop for all files
-for name in *.fq
-do
-new_name="$(echo "$name" | cut -d '.' -f 1,3 - )"
-echo "$new_name"
-done #cuts filenames
-
-#kallisto quant and rename files
-for name in *.fq; do new_name="$(echo "$name" | cut -d '.' -f 1,3 - )";
-> kallisto quant -i Bter_1.0 -o "$new_name" --single -l 300 -s 20 "$name" -t 8
-> done
-
-
-####### run kallisto with pseudobam option ###### 
-#also convert .sam to .bam
-for name in *.fq; 
-do new_name="$(echo "$name" | cut -d '.' -f 1,3 - )_pseudo";
-kallisto quant -i Bter_1.0 -o "$new_name" --pseudobam --single -l 300 -s 20 "$name" | samtools view -Sb - > "$name.bam" ; done
-
-
-#check bam files with:
-samtools view | grep -c '@NS'
-grep -c '@K00'
-
-#create stat file from bam file
-#e.g. samtools flagstat 2016-Bter-CON_C06-4-W1-head-54232438_combined_hiseq_nextseq.bam > 2016-Bter-CON_C06-4-W1-head-54232438_combined_hiseq_nextseq.stat
-
-for name in *.fq.bam ; do new_name="$(echo "$name" | cut -d '.' -f 1,1 - ).stat"; echo "$new_name"; 
-> samtools flagstat "$name" > "$new_name"
-> done
+# for W, some issue with colony name for CON (manually renamed), and CYH-C43 has 1 fewer file than others (asked Joe)
 
 
 
-#run qualimap on .bam files
-#run multiqc on qualimap files 
+# Note to self. to create an array the folowing is preferred;
+#    fastqs=(input/fastq_all/2016-Bter-${treatment}*-W[1-4]-*gz)   but not using here bc i need ot use them after
+
+ mkdir results
+ mv tmp/quant results/kallisto_quantifications
+
