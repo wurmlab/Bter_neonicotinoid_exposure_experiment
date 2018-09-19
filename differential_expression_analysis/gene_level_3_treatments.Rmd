@@ -41,7 +41,7 @@ We use raw, non-normalised estimated counts.
 ## Set paths to folders containing output files from kallisto
 paths <- list()
 paths$sample_batch_info <- "input/room_batch_information_per_sample-clean.txt"
-paths$kallisto_output   <- "input/kallisto_quantification"
+paths$kallisto_output   <- "input/kallisto_quantifications"
 
 # Set relative paths:
 paths$kallisto_files_relative <- grep(x       = list.files(paths$kallisto_output, recursive = TRUE),
@@ -125,7 +125,7 @@ Within the present analysis, two questions can be immediately asked:
 ```{r}
 ## Construct DESeq data set from txi object and sample information:
 deseq_txi <- DESeqDataSetFromTximport(txi     = txi_counts, 
-                                      colData = samples, 
+                                      colData = samples_information, 
                                       design  = ~batch + room + treatment)
 ```
 
