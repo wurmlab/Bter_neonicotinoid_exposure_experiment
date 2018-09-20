@@ -1,9 +1,10 @@
 module load gcc/7.1.0 
 
-ln -s ../../soft/hisat2-2.1.0 hisat
+ln -s ../../soft/hisat2-2.1.0/hisat2-build
+ln -s ../../soft/hisat2-2.1.0/hisat2
 
-mkdir ~/scratch/hisat_queen
-ln -s ~/scratch/hisat_queen tmp
+mkdir ~/scratch/
+ln -s ~/scratch/hisat_w tmp
 
 # obtain exon locations first in 0-based BED-like format
 gunzip --stdout input/reference/Bter1.0.40.gtf.gz > tmp/Bter1.0.40.gtf
@@ -16,13 +17,12 @@ gunzip --stdout input/reference/Bter_1.0.fa.gz > tmp/Bter_1.0.fa
 ./hisat/hisat2-build -p 36 --ss tmp/Bter_1.0.splice_sites --exon tmp/Bter_1.0.exons tmp/Bter_1.0.fa tmp/Bter_1.0 > tmp/Bter_1.0.log  2> tmp/Bter_1.0.err
 
 
-
 # map each sample
 treatments=(CON CLO IMI)
 
 for treatment in $treatments; do
   echo "running with ${treatment}"
-  fastqs=`ls input/fastq_all/2016-Bter-${treatment}[-_]*-Q-*gz`
+  fastqs=`ls input/fastq_all/2016-Bter-${treatment}[-_]*-W[0-9]-*gz`
   colonies=$(echo $fastqs | cut -d '-' -f 4 | sort -u)
   colonies=($(echo "$colonies"))
 
@@ -35,13 +35,21 @@ for treatment in $treatments; do
   done
 done
 
-sh hisat_commands.sh > hisat_commands.sh.log  2> hisat_commands.sh.err
+sh hisat_commands.sh > tmp/hisat_commands.sh.log  2> tmp/hisat_commands.sh.err
 
-## Extract annotations:
-python ../../../src/DEXSeq/inst/python_scripts/dexseq_prepare_annotation.py Bombus_terrestris.Bter_1.0.39.gtf Bombus_terrestris.Bter_1.0.39.gff3
+## getting counts for dexseq 
+# for some reason I was unable to get the virtualenv to work properly (ie to find htseq) after module load python/2.7.15
+ln -s ../../soft/DEXSeq_python1.26.0 dexseq_py
+
+virtualenv htseq  # should have put into tmp
+source ./htseq/bin/activate 
+## Extract annotations (ie convert to a simpler gff)
+python ./dexseq_py/dexseq_prepare_annotation.py tmp/Bter1.0.40.gtf tmp/Bter1.0.40.gtf.gff
 
 ## Count reads aligned over exons:
-for name in *.sam; 
-do 
-    python ../../../src/DEXSeq/inst/python_scripts/dexseq_count.py Bombus_terrestris.Bter_1.0.39.gff3 "$name" "$name".fb.txt; 
-done
+ls  tmp/quant/*.sam | parallel -v python dexseq_py/dexseq_count.py tmp/Bter1.0.40.gtf.gff {} {}.counts 
+
+
+## 
+mkdir results
+mv tmp/quant/*counts results
