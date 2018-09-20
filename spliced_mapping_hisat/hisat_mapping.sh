@@ -37,3 +37,11 @@ done
 
 sh hisat_commands.sh > hisat_commands.sh.log  2> hisat_commands.sh.err
 
+## Extract annotations:
+python ../../../src/DEXSeq/inst/python_scripts/dexseq_prepare_annotation.py Bombus_terrestris.Bter_1.0.39.gtf Bombus_terrestris.Bter_1.0.39.gff3
+
+## Count reads aligned over exons:
+for name in *.sam; 
+do 
+    python ../../../src/DEXSeq/inst/python_scripts/dexseq_count.py Bombus_terrestris.Bter_1.0.39.gff3 "$name" "$name".fb.txt; 
+done
