@@ -1,0 +1,184 @@
+---
+title: "Bombus pesticide exposure: gene expression in head"
+output: GO_enrichment.html
+---
+
+# Introduction 
+This script is for gene ontology (GO) enrichment analysis of differentiallly expressed genes to explore the biological processes and molecular functions associated with DE genes, using the R package 'TopGO' (https://www.bioconductor.org/packages/3.7/bioc/vignettes/topGO/inst/doc/topGO.pdf).
+Twp input files are required for the running of the test:  
+1) A genelist file:  
+The genelist file is a tab-delimited file containing two columns:  
+Column 1: Locus (contains gene or transcript name of interest).  
+Column 2: Rank value of interest (e.g. p-values or log fold changes).  
+Rank values were generated using the R package, DESeq2, and implemented using code in ```gene_level_3_treatments.Rmd```.  
+
+2) A GO database file:  
+The GO database file is a tab-delimited file containing two columns:  
+Column 1: Locus (contains gene or transcript name of interest).  
+Column 2: Comma separated GO terms (e.g. GO:0000001, GO:0000002, etc.).  
+
+This script will prepare data for GO analysis and create a 'TopGO object' from which enrichment tests can be performed to explore GO terms significantly enriched within the dataset. 
+This script outputs a results table of significantly enriched GO terms.
+
+*It should be run once per treatment, and will produce 3 output files each time it is run*
+
+```{r}
+# Load libraries; install from scratch if needed
+libraries <- c("topGO", "lintr", "lattice")
+for (lib in libraries) {
+    if (require(package = lib, character.only = TRUE)) {
+        print("Successful")
+    } else {
+        print("Installing")
+        source("https://bioconductor.org/biocLite.R")
+        biocLite(pkgs = lib)
+        library(lib, character.only = TRUE )
+    }
+}
+```
+
+## Step One: Input files, define output and objects for running topGO: 
+Load in genelist and database files.  
+
+```{r}
+## Step One
+## GO annotations
+gene_to_go_mapping_file <- "go_term_database_bter_dmel_orthologues_ensembl.txt"
+
+## file of significant genes (2 column file: i.e. gene id and pvalue) file:
+de_genes_file <- "input/input_for_go_term_analysis/wald_imi/de_genes_for_topGO.txt"
+
+output_directory <- "results/output_node_100_imi"
+if (file.exists(output_directory)) {
+  stop("The output directory:", output_directory, ", already exists",
+       "Let's avoid overwriting")
+} else {
+  dir.create(output_directory, recursive = TRUE)
+}
+
+## Read in input file:
+de_genes <- read.table(de_genes_file, header = TRUE)
+
+## Sort by raw p-value:
+de_genes_sorted <- de_genes[order(de_genes$raw_pvalue), ]
+
+## Remove na values:
+## NA values are present for certain genes without expression, such as tRNAs:
+de_genes_sorted_filtered <- subset(x      = de_genes_sorted,
+                                   subset = !is.na(raw_pvalue))
+
+## Read in GO annotations:  
+gene_to_go_mapping <- readMappings(file = gene_to_go_mapping_file)
+
+## Convert into topgo's genelist format:
+topgo_genelist        <- de_genes_sorted_filtered$raw_pvalue
+names(topgo_genelist) <- de_genes_sorted_filtered$locus
+
+# Define a cut-off for running fisher's exact test:  
+cutoff_for_top_fivepercent <- quantile(x = topgo_genelist, probs = 0.05)
+```
+
+## Steps Two and Three: Create topGO Object & run tests for GO term enrichment
+
+We create a topGO object for each GO term
+
+We perform two statistical tests:
+1. A ks test using the topGO 'weight01' algorithm
+2. A Fisher's exact test using the topGO 'weight01' algoritm
+
+We combine the output of each test. 
+We filter out enriched terms.
+
+We do this for each of the three GO categories (ie. Biological process, Molcular Function, Cellular Component):
+
+
+```{r}
+for (go_category in c("BP", "MF", "CC")) {
+  # STEP TWO
+  ## Build the GOdata object in topGO
+  my_go_data <- new("topGOdata",
+                    description = paste("GOtest", go_category, sep = "_"),
+                    ontology    = go_category,
+                    geneSel     = function(x) { # fails to run without this
+                                     return(x <= cutoff_for_top_fivepercent)
+                                   },
+                    allGenes    = topgo_genelist,
+                    gene2GO     = gene_to_go_mapping,
+                    annot       = annFUN.gene2GO,
+                    nodeSize    = 100) # Modify to reduce/increase stringency.
+  
+  # STEP THREE
+  ## Calculate ks test using 'weight01' algorithm:
+  result_weight_ks <- runTest(object    = my_go_data,
+                              algorithm = "weight01",
+                              statistic = "ks")
+  
+  ## Calculate fisher exact test using 'weight01' algorithm:
+  result_weight_fisher <- runTest(object    = my_go_data,
+                                  algorithm = "weight01",
+                                  statistic = "fisher")
+  
+  ## Combine results from statistical tests:
+  result_weight_output <- GenTable(object       = my_go_data,
+                                   weight_ks     = result_weight_ks,
+                                   weight_fisher = result_weight_fisher,
+                                   orderBy       = "weight_ks",
+                                   topNodes      = length(score(result_weight_ks)))
+  
+  ## Correct ks test for multiple testing:
+  result_weight_output$weight_ks <- as.numeric(result_weight_output$weight_ks)
+  result_weight_output$weight_fisher <- as.numeric(result_weight_output$weight_fisher)
+  result_weight_output$weight_ks_adjusted <- p.adjust(p=result_weight_output$weight_ks, method = c("fdr"))
+  result_weight_output$weight_fisher_adjusted <- p.adjust(p=result_weight_output$weight_fisher, method = c("fdr"))
+  
+  ## Output raw GO terms:
+  write.table(x         = result_weight_output,
+              file      = file.path(output_directory,
+                                    paste(go_category, "raw.txt", sep = "_")),
+              row.names = FALSE,
+              quote = FALSE,
+              sep       = "\t")
+  
+  ## Subset calls with significance higher than expected:
+  result_weight_output_sig <- subset(x      = result_weight_output,
+                                     subset = (Significant > Expected) & (weight_ks < 0.05))
+  
+  ## Update column names:
+  colnames(result_weight_output_sig)[6] <- gsub(" ", "_", colnames(result_weight_output_sig)[6])
+  
+  ## For significant terms, add an additional field called 'category' which will be used for plotting of individual go category:
+  result_weight_output_sig$category <- go_category
+  
+  ## Remove gaps between Terms, which can cause downstream problems:
+  result_weight_output_sig$Term <- gsub(" ", "_", result_weight_output_sig$Term)
+  
+  ## Print to console one of the GO terms of interest to check the distribution of that GO term across ranked genes:
+  print(showGroupDensity(object  = my_go_data,
+                         whichGO = head(result_weight_output_sig$GO.ID, n = 1),
+                         ranks   = TRUE,
+                         rm.one  = FALSE))
+                         
+  ## Write to output:
+  write.table(x         = result_weight_output_sig,
+              file      = file.path(output_directory,
+                                    paste(go_category, "sig.txt", sep = "_")),
+              row.names = FALSE,
+              quote = FALSE,
+              sep       = "\t")
+}
+
+```
+
+```{r}
+  ## Print out all GO terms of interest:
+  for (go_term in 1:nrow(result_weight_output_sig)){
+          output_name <- head(result_weight_output_sig$GO.ID, n = go_term)
+          output_name <- paste("./", output_name, ".pdf", sep="")
+          pdf()
+          print(showGroupDensity(object  = my_go_data,
+                         whichGO = result_weight_output_sig$GO.ID[go_term],
+                         ranks   = TRUE,
+                         rm.one  = FALSE))
+          dev.off
+  }
+  ```
