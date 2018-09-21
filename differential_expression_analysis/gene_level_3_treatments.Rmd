@@ -51,7 +51,7 @@ paths$kallisto_files <- file.path(paths$kallisto_output,
                                   paths$kallisto_files_relative)
 
 # Automatically extract file names from kallisto output for colnames
-names(paths$kallisto_files) <- gsub(paths$kallisto_files_relative, pattern = "/.*", replacement="") 
+names(paths$kallisto_files) <- gsub(paths$kallisto_files_relative, pattern = "/.*", replacement = "") 
 
 
 for (filenumber in 1:length(paths$kallisto_files)) {
@@ -163,7 +163,7 @@ deseq_results_CLO_vs_CON_df_ordered_sig <- subset(deseq_results_CLO_vs_CON_df_or
 nrow(deseq_results_CLO_vs_CON_df_ordered_sig)
 
 ## Save to file:
-write.table(x = write.table(x = deseq_results_CLO_vs_CON_df_ordered_sig, , 
+write.table(x = deseq_results_CLO_vs_CON_df_ordered_sig, 
             file = "results/clothianidin_vs_control/CLO_vs_CON_significant.tab", 
             sep = "\t",
             quote = FALSE)
@@ -196,28 +196,22 @@ deseq_results_IMI_vs_CON_df <- as.data.frame(deseq_results_IMI_vs_CON)
 deseq_results_IMI_vs_CON_df_ordered <- deseq_results_IMI_vs_CON_df[order(deseq_results_IMI_vs_CON_df$pvalue),]
 
 ## Create directory for output:
-dir.create(path = "results/imidacloprid_de_genes_output/")
+dir.create(path = "results/imidacloprid_vs_control/")
 
 ## Save to file:
 write.table(x = deseq_results_IMI_vs_CON_df_ordered, 
-            file ="results/imidacloprid_de_genes_output/IMI_vs_CON_raw_corrected_for_batch_and_room.txt", 
+            file = "results/imidacloprid_vs_control/IMI_vs_CON_all.tab",
             sep = "\t",
             quote = FALSE)
 
 ## Subset significant genes:
-deseq_results_IMI_vs_CON_df_ordered_sig <- subset(deseq_results_IMI_vs_CON_df_ordered, padj < 0.05)
+deseq_results_IMI_vs_CON_df_ordered_sig <- subset(deseq_results_IMI_vs_CON_df_ordered, padj <= 0.05)
 
 ## Save to file:
 write.table(x = deseq_results_IMI_vs_CON_df_ordered_sig, 
-            file ="results/imidacloprid_de_genes_output/IMI_vs_CON_significant_corrected_for_batch_and_room.txt", 
+            file = "results/imidacloprid_vs_control/IMI_vs_CON_significant.tab",
             sep = "\t",
             quote = FALSE)
-
-# Save significant genes for heatmap input 
-de_genes_IMI <- rownames(deseq_results_IMI_vs_CON_df_ordered_sig)
-
-## Save object for use in generating heatmap(s)
-save(de_genes_IMI, file = "results/imidacloprid_de_genes_output/significant_genes.Rdata")
 
 ##-----------------------------------------------------------------------------------------------------------------
 ## 4.2.1) How many and which genes are more/less expressed in imidacloprid-exposed workers in comparison to control?
@@ -230,6 +224,10 @@ nrow(deseq_results_IMI_vs_CON_df_ordered_sig_high)
 deseq_results_IMI_vs_CON_df_ordered_sig_low <- subset(deseq_results_IMI_vs_CON_df_ordered_sig, log2FoldChange < 0)
 nrow(deseq_results_IMI_vs_CON_df_ordered_sig_low)    
 ```
+
+So we have `nrow(deseq_results_IMI_vs_CON_df_ordered_sig)` significant genes, with `nrow(deseq_results__CLO_IMI_vs_CON_df_ordered_sig_high)` more highly expressed in CLO than CON, and `nrow(deseq_results_IMI_vs_CON_df_ordered_sig_low)` less highly expressed
+
+
 
 ```{r}
 ##=========================================================================================
@@ -250,39 +248,6 @@ publish(deseq_object, deseq_report, pvalueCutoff = 0.05,
 finish(deseq_report)
 ```
 
-### Step Five: Extract results for output for use in GO term analyses.
-For this we need extract the Wald test result adjusted p values.
-
-```{r}
-# Extract list of genes from the DESeq objects
-# i) For clothianidin
-de_genes_for_topGO_CLO <- data.frame(locus      = row.names(deseq_results_CLO_vs_CON_df), 
-                                     raw_pvalue = deseq_results_CLO_vs_CON_df$pvalue)
-
-# ii) For imidacloprid
-de_genes_for_topGO_IMI <- data.frame(locus      = row.names(deseq_results_IMI_vs_CON_df), 
-                                     raw_pvalue = deseq_results_IMI_vs_CON_df$pvalue)
-# Order by p-values 
-de_genes_for_topGO_CLO <- de_genes_for_topGO_CLO[order(de_genes_for_topGO_CLO$raw_pvalue),]
-de_genes_for_topGO_IMI <- de_genes_for_topGO_IMI[order(de_genes_for_topGO_IMI$raw_pvalue),]
-
-## Create directory for output:
-dir.create(path = "./results/input_for_go_term_analysis/wald_clo", recursive = TRUE)
-dir.create(path = "./results/input_for_go_term_analysis/wald_imi", recursive = TRUE)
-
-## Write to output:
-write.table(de_genes_for_topGO_CLO, 
-            file = "results/input_for_go_term_analysis/wald_clo/de_genes_for_topGO.txt", 
-            row.names = FALSE, 
-            sep = "\t",
-            quote = FALSE)
-
-write.table(de_genes_for_topGO_IMI, 
-            file = "results/input_for_go_term_analysis/wald_imi/de_genes_for_topGO.txt", 
-            row.names = FALSE, 
-            sep = "\t",
-            quote = FALSE)
-```
 
 ### Step Six: Principal Components Analysis
 ```{r}
