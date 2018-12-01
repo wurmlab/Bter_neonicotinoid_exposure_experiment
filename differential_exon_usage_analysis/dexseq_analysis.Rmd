@@ -2,7 +2,7 @@
 title: "dexseq_analysis"
 author: "JoeColgan"
 date: "14 May 2018"
-output: html_document
+output: dexseq_analysis.html
 ---
 
 ## Introduction
