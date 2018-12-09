@@ -170,12 +170,16 @@ for (pesticide in non_control_treatments){
                 deseq_results_df_reordered <- deseq_results_df[order(deseq_results_df$pvalue), ]
                 ## Save all analyzed data: 
                 write.table(x = deseq_results_df_reordered, 
-                    file = paste("results/", pesticide, "_vs_", control, "_all.tab", sep=""), 
+                    file = paste("results/", pesticide, "_vs_", control, "_", caste, "_all.tab", sep=""), 
                     sep = "\t",
                     quote = FALSE)
                 ## Subset significant genes:
                 deseq_results_df_reordered_sig <- subset(deseq_results_df_reordered, padj <= 0.05)
                 print(nrow(deseq_results_df_reordered_sig))
+                write.table(x = deseq_results_df_reordered_sig, 
+                    file = paste("results/", pesticide, "_vs_", control, "_", caste, "_sig.tab", sep=""), 
+                    sep = "\t",
+                    quote = FALSE)
         }
 }
 ```
