@@ -18,8 +18,9 @@ Current workflow consists of:
 01_amplitude_kallisto_quantifications/
 |- run_kallisto.sh
 02_splice_aware_alignments/
-|-  
+|- hisat_mapping.sh
 03_exon_level_read_count_quantification/
+|- 
 04_differential_expression_analysis/
 05_differential_exon_usage_analysis/
 06_gene_ontology_enrichment_analysis/
