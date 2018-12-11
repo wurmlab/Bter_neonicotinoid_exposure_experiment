@@ -1,6 +1,6 @@
 ## Introduction
 
-The current repository contains all scripts used for the differential expression analysis of _Bombus terrestris_ castes in response to neonicotinoid exposure as reported in: 
+The current repository contains all scripts used for the differential expression analysis of _Bombus terrestris_ castes in response to neonicotinoid exposure as reported in:  
 Colgan, T.J., Fletcher, I.K., Arce, A.N., Gill, R.J., Ramos Rodrigues, A., Stolle, E., Chittka, L. and Wurm, Y.  
 Caste- and pesticide-specific effects of neonicotinoid pesticide exposure on gene expression in bumblebees.   
 
