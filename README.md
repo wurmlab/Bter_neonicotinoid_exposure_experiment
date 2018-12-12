@@ -29,8 +29,11 @@ Current workflow consists of:
 |- treatment_caste_interaction_analysis
 |- |- gene_level_3treatments.Rmd
 05_differential_exon_usage_analysis/
+|- dexseq_analysis.Rmd
 06_gene_ontology_enrichment_analysis/
+|- go_enrichment_analysis.Rmd
 07_comparative_read_count_analysis/
+|- 
 08_visualisation_of_graphics/
 
 ```
