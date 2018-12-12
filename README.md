@@ -22,7 +22,12 @@ Current workflow consists of:
 03_exon_level_read_count_quantification/
 |- prepare_input_files_for_dexseq.sh
 04_differential_expression_analysis/
-|- 
+|- input/
+|- |- sample_infomration ## POTENTIALL REDUNDANT
+|- treatment_specific_analysis
+|- |- gene_level_3treatments.Rmd
+|- treatment_caste_interaction_analysis
+|- |- gene_level_3treatments.Rmd
 05_differential_exon_usage_analysis/
 06_gene_ontology_enrichment_analysis/
 07_comparative_read_count_analysis/
