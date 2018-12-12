@@ -136,7 +136,7 @@ deseq_txi <- DESeqDataSetFromTximport(txi     = txi_counts,
   Running a Wald t-test (default test within DESeq2)
 ```{r}
 ##==================================================================================================================
-## 4.1) Which genes are differentially expressed within clothianidin-exposed workers in comparison to control?
+## Which genes are differentially expressed within each treatment for each caste in comparison to control?
 ##==================================================================================================================
 ## Perform a pairwise comparison between treatments:
 deseq_object  <- DESeq(deseq_txi, 
@@ -148,16 +148,25 @@ group_names <- grep("group", resultsNames(deseq_object), value=TRUE)
 group_names <- gsub("group", "", group_names)
 treatments <- gsub("workers", "", group_names)
 treatments <- unique(gsub("queens", "", treatments))
+
+## Set control treatment:
 control <- "CON"
 non_control_treatments <- treatments[!treatments %in% control]
+
+## Assign castes:
 caste_samples <- c("queens", "workers")
 
+## For each pestucude in non control treatment list:
 for (pesticide in non_control_treatments){
         for (caste in caste_samples){
+                ## Print the name of caste to console:
                 print(caste)
+                ## Print the name of pesticide treatment to console:
                 print(pesticide)
+                ## Parse samples for each pesticide treatment to include in analysis:
                 pesticide_tmp <- grep(pesticide, resultsNames(deseq_object),  value=TRUE)
                 pesticide_tmp <- gsub("group", "", pesticide_tmp)
+                ## Parse castes for each treatment to include in analysis:
                 caste_pest_tmp <- grep(caste, pesticide_tmp,  value=TRUE)
                 control_tmp <- grep(control, resultsNames(deseq_object),  value=TRUE)
                 caste_con_tmp <- grep(caste, control_tmp, value=TRUE)
@@ -168,14 +177,16 @@ for (pesticide in non_control_treatments){
                 deseq_results_df <- as.data.frame(deseq_results)
                 # Results table ordered by smallest p value:
                 deseq_results_df_reordered <- deseq_results_df[order(deseq_results_df$pvalue), ]
-                ## Save all analyzed data: 
+                ## Write results for all genes to file:
                 write.table(x = deseq_results_df_reordered, 
                     file = paste("results/", pesticide, "_vs_", control, "_", caste, "_all.tab", sep=""), 
                     sep = "\t",
                     quote = FALSE)
                 ## Subset significant genes:
                 deseq_results_df_reordered_sig <- subset(deseq_results_df_reordered, padj <= 0.05)
+                ## Print the number of significant differentially expressed genes:
                 print(nrow(deseq_results_df_reordered_sig))
+                ## Write significant differentially expressed genes to file:
                 write.table(x = deseq_results_df_reordered_sig, 
                     file = paste("results/", pesticide, "_vs_", control, "_", caste, "_sig.tab", sep=""), 
                     sep = "\t",
