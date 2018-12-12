@@ -22,6 +22,7 @@ Current workflow consists of:
 03_exon_level_read_count_quantification/
 |- 
 04_differential_expression_analysis/
+|- 
 05_differential_exon_usage_analysis/
 06_gene_ontology_enrichment_analysis/
 07_comparative_read_count_analysis/
