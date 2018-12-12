@@ -24,7 +24,7 @@ source ./htseq/bin/activate
 python ./dexseq_py/dexseq_prepare_annotation.py tmp/Bter1.0.40.gtf tmp/Bter1.0.40.gtf.gff
 
 ## Count reads aligned over exons and output results in a temporary folder:
-ls  tmp/quant/*.sam | parallel -v python dexseq_py/dexseq_count.py -s reverse tmp/Bter1.0.40.gtf.gff {} {}.counts
+ls tmp/quant/*.sam | parallel -v python dexseq_py/dexseq_count.py -s reverse tmp/Bter1.0.40.gtf.gff {} {}.counts
 
 ## Create output results directory
 mkdir results
