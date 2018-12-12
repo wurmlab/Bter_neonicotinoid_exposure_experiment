@@ -1,0 +1,263 @@
+--- 
+title: "Graphical representation of DE genes"
+--- 
+
+Introduction:
+
+This script is for exploratory analysis of transcript quantification data and results of differential gene expression analysis.
+Input files should be R objects saved and generated from previous scripts of DE analysis, including the object resulting from using tximport() on kallisto files, the significant transcript abundances selected from this object and a results table of significant genes, generated using DESeq2. 
+This script will organise input data for generating heatmaps of significantly differentially expressed genes, based on statistical significance and log fold changes in expression. This script produces a heatmap that can be exported. 
+
+```{r}
+# Load libraries; install from scratch if needed
+libraries <- c("ggplot2", "gplots", "heatmap3", "ggfortify", "ggDESeq",
+               "reshape2", "scales", "ggpubr", "grid")
+for (lib in libraries) {
+    if (require(package = lib, character.only = TRUE)) {
+        print("Successful")
+    } else {
+        print("Installing")
+        source("https://bioconductor.org/biocLite.R")
+        biocLite(pkgs = lib)
+        library(lib, character.only = TRUE )
+    }
+}
+
+# Load R objects from previous script output
+## Load raw count estimates:
+load("results/count_estimates/txi_count_estimates.Rdata")
+## Load deseq2 object containing results of Wald test:
+load("results/deseq_wald_object_output/deseq_wald_object.Rdata")
+## Load significant genes for plotting:
+load("results/deseq2_clo_sig_output/deseq_object_clo_sig_genes.Rdata")
+load("results/deseq2_imi_sig_output/deseq_object_sig_genes.Rdata")
+#load("input/graphical_representation/de_genes_lfc.RData")
+
+## Assign path for output:
+output <- "results/heatmap_figure"
+dir.create(output, recursive = TRUE)
+```
+
+Step One: Organise data for generating a heatmap:
+We load in raw estimated counts from tximport and normalise.  
+We subset genes identified to be differentially expressed by DESeq2. 
+We rename sample names (column names in dataframe) for plotting.
+We add new annotations for each gene to plot. 
+
+```{r}
+## Normalise counts: 
+normalised_counts_df_w <- t(scale(t(txi_counts$counts), center = TRUE, scale = TRUE))
+
+## Select significant gene counts
+normalised_counts_df_sig_clo_w <- normalised_counts_df_w[de_genes_CLO,]
+
+## Convert significant counts into a dataframe:
+normalised_counts_df_sig_clo_w_df <- as.data.frame(normalised_counts_df_sig_clo_w)
+```
+
+```{r}
+## Import txt file with gene descriptions
+input_heatmap_CLO_w <- "de_genes_for_heatmap_CLO_workers.txt"
+
+genes_for_heatmap_CLO_w <- read.table(paste("./input/graphical_representation/", input_heatmap_CLO_w, sep=""), header = FALSE, sep = "\t", fill = TRUE)
+
+## Update column names:
+colnames(genes_for_heatmap_CLO_w) <- c("locus", "description")
+
+#new_sample_names <- paste(new_sample_names, +rep(1:4,2), sep="_")
+CLO_sample_names_w <- c(paste("CLO", "_",1:4, sep=""),
+                      paste("CON", "_",1:4, sep=""))
+
+## Remove IMI treatment
+normalised_counts_df_sig_clo_w_df <- normalised_counts_df_sig_clo_w_df[,1:8]
+
+## Rename column names:
+colnames(normalised_counts_df_sig_clo_w_df) <- CLO_sample_names_w
+
+## Add rownames with gene descriptions:
+rownames(normalised_counts_df_sig_clo_w_df) <- genes_for_heatmap_CLO_w$locus
+normalised_counts_df_sig_clo_w_df$description <- paste(genes_for_heatmap_CLO_w$locus, genes_for_heatmap_CLO_w$description, sep=" ")
+```
+
+Step Two: Calculate clusters based on gene expression across samples:
+
+```{r}
+## Calculate eucleidean distance between rows:
+dd<-hclust(dist(as.matrix(normalised_counts_df_sig_clo_w_df[,1:8])))
+
+## Reorder based on cluster order:
+normalised_counts_df_sig_clo_w_df_ordered <- as.data.frame(normalised_counts_df_sig_clo_w_df[dd$order, ])
+
+## Melt dataframe:
+normalised_counts_df_sig_clo_w_df_ordered_melt <- melt(normalised_counts_df_sig_clo_w_df_ordered)
+
+## Rename columns:
+colnames(normalised_counts_df_sig_clo_w_df_ordered_melt) <- c("gene_name", "sample", "normalised_counts")
+```
+
+Reorder gene names for plotting
+
+```{r}
+## Reorder "gene_name" for plotting:
+normalised_counts_df_sig_clo_w_df_ordered_melt$gene_name <- 
+        factor(normalised_counts_df_sig_clo_w_df_ordered_melt$gene_name, levels = rev(unique(c(as.character(unlist(normalised_counts_df_sig_clo_w_df_ordered_melt$gene_name))))))
+
+## Define treatments to plot:
+treatment_1 <- "Clothianidin"
+treatment_2 <- "Control"
+
+## Create a treatment column to plot
+normalised_counts_df_sig_clo_w_df_ordered_melt$treatment <- rep(c(treatment_1, treatment_2), 
+                                                              each = (nrow(normalised_counts_df_sig_clo_w_df_ordered_melt)/2))
+```
+
+Step Three: Plot heatmap
+We plot heatmap using normalised counts as input into ggplot2.  
+
+```{r}
+## Plot heatmap:
+heatmap_plot_workers <- ggplot(normalised_counts_df_sig_clo_w_df_ordered_melt, aes(sample, gene_name)) +
+                geom_tile(aes(fill = normalised_counts)) +
+                geom_vline(xintercept = c(0.5, 4.5, 8.5)) +
+                #geom_hline(yintercept = c(32.5, 33.5)) + 
+                scale_fill_gradient2(low = "black", mid = "white", high = "red") +
+                ylab("") +
+                xlab("") +
+                theme(legend.title = element_text(size = 12, face = "bold"),
+                      legend.text = element_text(size = 12, face = "bold"),
+                      #axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+                      axis.text.x=element_blank(),
+                      axis.text.y = element_text(size = 12, face = "plain", colour="black"),
+                      axis.title = element_text(size = 12,face = "bold"),
+                      panel.grid.major = element_blank(),
+                      panel.grid.minor = element_blank(),
+                      panel.background = element_blank(),
+                      legend.position = "top") +
+                scale_y_discrete(position = "right") +
+                labs(fill = 'Log fold change') +
+  theme(axis.text.y = element_text(face = c(rep('plain', 25),'bold', rep("plain", 20)))) 
+```
+
+For plotting the quen data on a second plot:
+Step One: Load in queen data:
+
+```{r}
+# Load R objects from previous script output
+## Load raw count estimates:
+load("results/linked_queen_data/count_estimates/txi_count_estimates.Rdata")
+## Load deseq2 object containing results of Wald test:
+load("results/linked_queen_data/deseq_wald_object_output/deseq_wald_object.Rdata")
+## Load significant genes for plotting:
+load("results/linked_queen_data/deseq2_clo_sig_output/deseq_object_clo_sig_genes.Rdata")
+load("results/linked_queen_data/deseq2_imi_sig_output/deseq_object_sig_genes.Rdata")
+#load("input/graphical_representation/de_genes_lfc.RData")
+```
+Step Two: Organise data for generating a heatmap:
+We load in raw estimated counts from tximport and normalise.  
+We subset genes identified to be differentially expressed by DESeq2. 
+We rename sample names (column names in dataframe) for plotting.
+We add new annotations for each gene to plot. 
+
+```{r}
+## Normalise counts: 
+normalised_counts_df_q <- t(scale(t(txi_counts$counts), center = TRUE, scale = TRUE))
+
+## Select significant gene counts
+normalised_counts_df_sig_clo_q <- normalised_counts_df_q[de_genes_CLO,]
+
+## Convert significant counts into a dataframe:
+normalised_counts_df_sig_clo_q_df <- as.data.frame(normalised_counts_df_sig_clo_q)
+```
+```{r}
+## Import txt file with gene descriptions
+input_heatmap_CLO_q <- "de_genes_for_heatmap_CLO_queens.txt"
+
+genes_for_heatmap_CLO_q <- read.table(paste("./results/linked_queen_data/", input_heatmap_CLO_q, sep=""), header = FALSE, sep = "\t", fill = TRUE)
+
+## Update column names:
+colnames(genes_for_heatmap_CLO_q) <- c("locus", "description")
+
+#new_sample_names <- paste(new_sample_names, +rep(1:4,2), sep="_")
+CLO_sample_names_q <- c(paste("CLO", "_",1:4, sep=""),
+                      paste("CON", "_",1:4, sep=""))
+
+## Remove IMI treatment
+normalised_counts_df_sig_clo_q_df <- normalised_counts_df_sig_clo_q_df[,1:8]
+
+## Rename column names:
+colnames(normalised_counts_df_sig_clo_q_df) <- CLO_sample_names_q
+
+## Add rownames with gene descriptions:
+rownames(normalised_counts_df_sig_clo_q_df) <- genes_for_heatmap_CLO_q$locus
+normalised_counts_df_sig_clo_q_df$description <- paste(genes_for_heatmap_CLO_q$locus, genes_for_heatmap_CLO_q$description, sep=" ")
+```
+
+```{r}
+## Calculate eucleidean distance between rows:
+dd<-hclust(dist(as.matrix(normalised_counts_df_sig_clo_q_df[,1:8])))
+
+## Reorder based on cluster order:
+normalised_counts_df_sig_clo_q_df_ordered <- as.data.frame(normalised_counts_df_sig_clo_q_df[dd$order, ])
+
+## Melt dataframe:
+normalised_counts_df_sig_clo_q_df_ordered_melt <- melt(normalised_counts_df_sig_clo_q_df_ordered)
+
+## Rename columns:
+colnames(normalised_counts_df_sig_clo_q_df_ordered_melt) <- c("gene_name", "sample", "normalised_counts")
+```
+Reorder gene names for plotting
+
+```{r}
+## Reorder "gene_name" for plotting:
+normalised_counts_df_sig_clo_q_df_ordered_melt$gene_name <- 
+        factor(normalised_counts_df_sig_clo_q_df_ordered_melt$gene_name, levels = rev(unique(c(as.character(unlist(normalised_counts_df_sig_clo_q_df_ordered_melt$gene_name))))))
+
+## Define treatments to plot:
+treatment_1 <- "Clothianidin"
+treatment_2 <- "Control"
+
+## Create a treatment column to plot
+normalised_counts_df_sig_clo_q_df_ordered_melt$treatment <- rep(c(treatment_1, treatment_2), 
+                                                              each = (nrow(normalised_counts_df_sig_clo_q_df_ordered_melt)/2))
+```
+Step Three: Plot heatmap
+We plot heatmap using normalised counts as input into ggplot2.
+```{r}
+## Plot heatmap:
+heatmap_plot_2 <- ggplot(normalised_counts_df_sig_clo_q_df_ordered_melt, aes(sample, gene_name)) +
+                geom_tile(aes(fill = normalised_counts)) +
+                geom_vline(xintercept = c(0.5,4.5, 8.5)) +
+                #geom_hline(yintercept = c(32.5, 33.5)) + 
+                scale_fill_gradient2(low = "black", mid = "white", high = "red") +
+                xlab("") +
+                ylab("") +
+                geom_text(x = 2.5, y = -0.2, label = "Clothianidin", size = 8, fontface = "bold") +
+                geom_text(x = 6.5, y = -0.2, label = "Control", size = 8, fontface = "bold") +
+                theme(legend.title = element_text(size = 10, face = "bold"),
+                      legend.text = element_text(size = 10, face = "bold"),
+                      axis.text.x = element_text(angle = 45, hjust = 1, size = 12, face = "bold"),
+                      axis.text.y = element_text(size = 12, face="plain", colour="black"),
+                      axis.title = element_text(size = 12),
+                      panel.grid.major = element_blank(),
+                      panel.grid.minor = element_blank(),
+                      panel.background = element_blank(),
+                      legend.position = "none") +
+                scale_y_discrete(position = "right") +
+                labs(fill = 'Log fold change') +
+                  theme(axis.text.y = element_text(face = c(rep('plain', 2),'bold', rep("plain", 20))))
+```
+
+Plot both worker and queen clothiandin heatmaps together:
+
+```{r}
+## Combine plot:
+ggarrange(heatmap_plot_1, heatmap_plot_2,
+                           align = "hv",
+                           nrow = 2, ncol = 1,
+                           heights = c(2.0,1),
+                           common.legend = FALSE,
+                           labels = c("A) Worker", "B) Queen"),
+                           vjust = c(1.4,1.4))
+
+```
+
