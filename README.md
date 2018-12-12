@@ -20,7 +20,7 @@ Current workflow consists of:
 02_splice_aware_alignments/
 |- hisat_mapping.sh
 03_exon_level_read_count_quantification/
-|- 
+|- prepare_input_files_for_dexseq.sh
 04_differential_expression_analysis/
 |- 
 05_differential_exon_usage_analysis/
