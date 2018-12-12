@@ -34,6 +34,9 @@ Current workflow consists of:
 |- go_enrichment_analysis.Rmd
 07_comparative_read_count_analysis/
 |- 
-08_visualisation_of_graphics/
+08_plot_visualisation/
+|- plot_DEGs_heatmap.Rmd
+|- plot_go_barchart.Rmd
+
 
 ```
