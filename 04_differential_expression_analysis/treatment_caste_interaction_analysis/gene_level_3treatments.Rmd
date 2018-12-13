@@ -121,138 +121,117 @@ Within the present analysis, two questions can be immediately asked:
     1. What genes are differentially expressed within clothianidin-exposed workers in comparison to control?
     2. What genes are differentially expressed within imidacloprid-exposed workers in comparison to control?
 
-```{r}
-## Create a combined variable:
-samples_information$group <- factor(paste0(samples_information$treatment, samples_information$caste))
-## Construct DESeq data set from txi object and sample information:
-deseq_txi <- DESeqDataSetFromTximport(txi     = txi_counts, 
-                                      colData = samples_information, 
-                                      design  = ~batch + group)
-```
-
 # Run DESeq2 (Wald test) for differential expression analysis:
   Which genes are differentially expressed between each treatment and control?
   Running a Wald t-test (default test within DESeq2)
-```{r}
-##==================================================================================================================
-## Which genes are differentially expressed within each treatment for each caste in comparison to control?
-##==================================================================================================================
+
+## Set reference caste equal to workers first:
+
+```{r, message=FALSE}
+## Set workers as reference for caste:
+samples_information$caste <- relevel(x = samples_information$caste, ref = "workers") 
+
+## Rerun model design:
+deseq_txi <- DESeqDataSetFromTximport(txi     = txi_counts, 
+                                      colData = samples_information, 
+                                      design  = ~batch + caste + treatment + caste:treatment)
+
 ## Perform a pairwise comparison between treatments:
 deseq_object  <- DESeq(deseq_txi, 
                        test = "Wald", 
-                       betaPrior = TRUE)
+                       betaPrior = FALSE)
 
-## Extract group names:
-group_names <- grep("group", resultsNames(deseq_object), value=TRUE)
-group_names <- gsub("group", "", group_names)
-treatments <- gsub("workers", "", group_names)
-treatments <- unique(gsub("queens", "", treatments))
+group_names <- grep("treatment_", resultsNames(deseq_object), value=TRUE)
+treatments <- gsub("treatment_", "", group_names)
+treatments <- gsub("_vs_CON", "", treatments)
 ## Set control treatment:
 control <- "CON"
 non_control_treatments <- treatments[!treatments %in% control]
-## Assign castes:
-caste_samples <- c("queens", "workers")
-## For each pestucude in non control treatment list:
-for (pesticide in non_control_treatments){
-        for (caste in caste_samples){
-                ## Print the name of caste to console:
-                print(caste)
-                ## Print the name of pesticide treatment to console:
-                print(pesticide)
-                ## Parse samples for each pesticide treatment to include in analysis:
-                pesticide_tmp <- grep(pesticide, resultsNames(deseq_object),  value=TRUE)
-                pesticide_tmp <- gsub("group", "", pesticide_tmp)
-                ## Parse castes for each treatment to include in analysis:
-                caste_pest_tmp <- grep(caste, pesticide_tmp,  value=TRUE)
-                control_tmp <- grep(control, resultsNames(deseq_object),  value=TRUE)
-                caste_con_tmp <- grep(caste, control_tmp, value=TRUE)
-                caste_con_tmp <- gsub("group", "", caste_con_tmp)
-                ## Extract results:
-                deseq_results <- results(deseq_object, contrast = c("group", caste_pest_tmp, caste_con_tmp))
-                ## Convert into a dataframe:
-                deseq_results_df <- as.data.frame(deseq_results)
-                # Results table ordered by smallest p value:
-                deseq_results_df_reordered <- deseq_results_df[order(deseq_results_df$pvalue), ]
-                ## Write results for all genes to file:
-                #write.table(x = deseq_results_df_reordered, 
-                #    file = paste("results/", pesticide, "_vs_", control, "_", caste, "_all.tab", sep=""), 
-                #    sep = "\t",
-                #    quote = FALSE)
-                ## Subset significant genes:
-                deseq_results_df_reordered_sig <- subset(deseq_results_df_reordered, padj <= 0.05)
-                ## Print the number of significant differentially expressed genes:
-                print(nrow(deseq_results_df_reordered_sig))
-                ## Write significant differentially expressed genes to file:
-                #write.table(x = deseq_results_df_reordered_sig, 
-                #    file = paste("results/", pesticide, "_vs_", control, "_", caste, "_sig.tab", sep=""), 
-                #    sep = "\t",
-                #    quote = FALSE)
-        }
-}
-```
 
-Lastly, an important question would be what genes are differentially expressed in response to pesticide treatment irrespective of caste?
+## So the current model does not use betaPrior meaning that spurious results may be introduced:
+## First of all we want to check the condition effect for the reference caste (i.e. queens)
+for (pesticide in non_control_treatments){
+        ## print pesticide to console:
+        print(pesticide)
+        ## Contrast pesticide and control:
+        results_tmp <- results(deseq_object, contrast=c("treatment", pesticide, control))
+        ## Convert to dataframe and sort by significance (adjusted p-value):
+        results_tmp_df <- as.data.frame(results_tmp)
+        ## Reorder by significance and count number of significantly differentially expressed gene:
+        results_tmp_df_sorted <- results_tmp_df[order(results_tmp_df$padj), ]
+        results_tmp_df_sorted_genes <- nrow(subset(results_tmp_df_sorted, padj < 0.05))
+        print(c(paste("Main effect:", results_tmp_df_sorted_genes)))
+        ## Extract results for 
+        interaction <- c(paste("castequeens.treatment", pesticide, sep=""))
+        results_tmp_2 <- results(deseq_object, 
+                                 list( c(paste("treatment_", pesticide, "_vs_", control, sep = "")),
+                                         c(interaction) ))
+        ## Convert to dataframe, sort and count number of significant DEGs:
+        results_tmp_2_df <- as.data.frame(results_tmp_2)
+        results_tmp_2_df_sorted <- results_tmp_2_df[order(results_tmp_2_df$padj), ]
+        results_tmp_2_df_sorted_genes <- nrow(subset(results_tmp_2_df_sorted, padj < 0.05))
+        print(c(paste("Main effect plus interaction effect:", results_tmp_2_df_sorted_genes)))
+        ## Step Three: investigate whether treatments effects castes differently:
+        diff_across_castes <- results(deseq_object, name=interaction)
+        diff_across_castes_df <- as.data.frame(diff_across_castes)
+        diff_across_castes_df_sorted <- diff_across_castes_df[order(diff_across_castes_df$padj), ]
+        diff_across_castes_df_sorted_genes <- nrow(subset(diff_across_castes_df_sorted, padj < 0.05))
+        print(c(paste("Total number of genes:", diff_across_castes_df_sorted_genes)))
+}
+
+```
+Run analysis for both pesticide treatments using queen as reference caste. 
 
 ```{r, message=FALSE}
-## Construct DESeq data set from txi object and sample information:
+## Set queens as reference for caste:
+samples_information$caste <- relevel(x = samples_information$caste, ref = "queens") 
+
+## Rerun model design:
 deseq_txi <- DESeqDataSetFromTximport(txi     = txi_counts, 
                                       colData = samples_information, 
-                                      design  = ~batch + caste + treatment)
-```
+                                      design  = ~batch + caste + treatment + caste:treatment)
 
-# Run DESeq2 (Wald test) for differential expression analysis:
-  Which genes are differentially expressed between each treatment and control?
-  Running a Wald t-test (default test within DESeq2)
-  
-```{r}
-##==================================================================================================================
-## Which genes are differentially expressed within each treatment for each caste in comparison to control?
-##==================================================================================================================
 ## Perform a pairwise comparison between treatments:
 deseq_object  <- DESeq(deseq_txi, 
                        test = "Wald", 
-                       betaPrior = TRUE)
+                       betaPrior = FALSE)
 
-## Extract treatment names:
-treatment_names <- grep("treatment", resultsNames(deseq_object), value=TRUE)
-treatment_names <- gsub("treatment", "", treatment_names)
-#treatments <- gsub("workers", "", treatment_names)
-#treatments <- unique(gsub("queens", "", treatments))
-
+group_names <- grep("treatment_", resultsNames(deseq_object), value=TRUE)
+treatments <- gsub("treatment_", "", group_names)
+treatments <- gsub("_vs_CON", "", treatments)
 ## Set control treatment:
 control <- "CON"
-non_control_treatments <- treatment_names[!treatment_names %in% control]
+non_control_treatments <- treatments[!treatments %in% control]
 
-## For each pestucude in non control treatment list:
+## So the current model does not use betaPrior meaning that spurious results may be introduced:
+## First of all we want to check the condition effect for the reference caste (i.e. queens)
 for (pesticide in non_control_treatments){
-                ## Print the name of pesticide treatment to console:
-                print(pesticide)
-                ## Parse samples for each pesticide treatment to include in analysis:
-                pesticide_tmp <- grep(pesticide, resultsNames(deseq_object),  value=TRUE)
-                pesticide_tmp <- gsub("treatment", "", pesticide_tmp)
-                ## Parse castes for each treatment to include in analysis:
-                control_tmp <- grep(control, resultsNames(deseq_object),  value=TRUE)
-                control_tmp <- gsub("treatment", "", control_tmp)
-                ## Extract results:
-                deseq_results <- results(deseq_object, contrast = c("treatment", pesticide_tmp, control_tmp))
-                ## Convert into a dataframe:
-                deseq_results_df <- as.data.frame(deseq_results)
-                # Results table ordered by smallest p value:
-                deseq_results_df_reordered <- deseq_results_df[order(deseq_results_df$pvalue), ]
-                print(head(deseq_results_df_reordered))
-                ## Write results for all genes to file:
-                write.table(x = deseq_results_df_reordered, 
-                    file = paste("results/", pesticide, "_vs_", control, "_all.tab", sep=""), 
-                    sep = "\t",
-                    quote = FALSE)
-                ## Subset significant genes:
-                deseq_results_df_reordered_sig <- subset(deseq_results_df_reordered, padj <= 0.05)
-                ## Print the number of significant differentially expressed genes:
-                print(nrow(deseq_results_df_reordered_sig))
-                ## Write significant differentially expressed genes to file:
-                write.table(x = deseq_results_df_reordered_sig, 
-                    file = paste("results/", pesticide, "_vs_", control, "_sig.tab", sep=""), 
-                    sep = "\t",
-                    quote = FALSE)
+        ## print pesticide to console:
+        print(pesticide)
+        ## Step One: Condition effect for caste (the main effect)
+        ## Contrast pesticide and control:
+        results_tmp <- results(deseq_object, contrast=c("treatment", pesticide, control))
+        ## Convert to dataframe and sort by significance (adjusted p-value):
+        results_tmp_df <- as.data.frame(results_tmp)
+        ## Reorder by significance and count number of significantly differentially expressed gene:
+        results_tmp_df_sorted <- results_tmp_df[order(results_tmp_df$padj), ]
+        results_tmp_df_sorted_genes <- nrow(subset(results_tmp_df_sorted, padj < 0.05))
+        print(c(paste("Main effect:", results_tmp_df_sorted_genes)))
+        ## Step Two: Extract results for main effect of condition plus the interaction term:
+        interaction <- c(paste("casteworkers.treatment", pesticide, sep=""))
+        results_tmp_2 <- results(deseq_object, 
+                                 list( c(paste("treatment_", pesticide, "_vs_", control, sep = "")),
+                                         c(interaction) ))
+        ## Convert to dataframe, sort and count number of significant DEGs:
+        results_tmp_2_df <- as.data.frame(results_tmp_2)
+        results_tmp_2_df_sorted <- results_tmp_2_df[order(results_tmp_2_df$padj), ]
+        results_tmp_2_df_sorted_genes <- nrow(subset(results_tmp_2_df_sorted, padj < 0.05))
+        print(c(paste("Main effect plus interaction effect:", results_tmp_2_df_sorted_genes)))
+        ## Step Three: investigate whether treatments effects castes differently:
+        diff_across_castes <- results(deseq_object, name=interaction)
+        diff_across_castes_df <- as.data.frame(diff_across_castes)
+        diff_across_castes_df_sorted <- diff_across_castes_df[order(diff_across_castes_df$padj), ]
+        diff_across_castes_df_sorted_genes <- nrow(subset(diff_across_castes_df_sorted, padj < 0.05))
+        print(c(paste("Total number of genes:", diff_across_castes_df_sorted_genes)))
 }
 ```
