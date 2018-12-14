@@ -124,10 +124,8 @@ Within the present analysis, two questions can be immediately asked:
 # Run DESeq2 (Wald test) for differential expression analysis:
   Which genes are differentially expressed between each treatment and control?
   Running a Wald t-test (default test within DESeq2)
-
-## Set reference caste equal to workers first:
-
-```{r, message=FALSE}
+  
+```{r, message = FALSE}
 ## Set workers as reference for caste:
 samples_information$caste <- relevel(x = samples_information$caste, ref = "workers") 
 
@@ -146,13 +144,14 @@ treatments <- gsub("treatment_", "", group_names)
 treatments <- gsub("_vs_CON", "", treatments)
 ## Set control treatment:
 control <- "CON"
-non_control_treatments <- treatments[!treatments %in% control]
-
+non_control_treatments <- treatments[!treatments %in% control] 
+  
 ## So the current model does not use betaPrior meaning that spurious results may be introduced:
 ## First of all we want to check the condition effect for the reference caste (i.e. queens)
 for (pesticide in non_control_treatments){
         ## print pesticide to console:
         print(pesticide)
+        ## Step One: Condition effect for caste (the main effect)
         ## Contrast pesticide and control:
         results_tmp <- results(deseq_object, contrast=c("treatment", pesticide, control))
         ## Convert to dataframe and sort by significance (adjusted p-value):
@@ -160,8 +159,8 @@ for (pesticide in non_control_treatments){
         ## Reorder by significance and count number of significantly differentially expressed gene:
         results_tmp_df_sorted <- results_tmp_df[order(results_tmp_df$padj), ]
         results_tmp_df_sorted_genes <- nrow(subset(results_tmp_df_sorted, padj < 0.05))
-        print(c(paste("Main effect:", results_tmp_df_sorted_genes)))
-        ## Extract results for 
+        print(c(paste("The main effect of ", pesticide, " treatment effects ", results_tmp_df_sorted_genes, " genes", sep="")))
+        ## Step Two: Extract results for main effect of condition plus the interaction term:
         interaction <- c(paste("castequeens.treatment", pesticide, sep=""))
         results_tmp_2 <- results(deseq_object, 
                                  list( c(paste("treatment_", pesticide, "_vs_", control, sep = "")),
@@ -216,7 +215,7 @@ for (pesticide in non_control_treatments){
         ## Reorder by significance and count number of significantly differentially expressed gene:
         results_tmp_df_sorted <- results_tmp_df[order(results_tmp_df$padj), ]
         results_tmp_df_sorted_genes <- nrow(subset(results_tmp_df_sorted, padj < 0.05))
-        print(c(paste("Main effect:", results_tmp_df_sorted_genes)))
+        print(c(paste("The main effect of ", pesticide, " treatment effects ", results_tmp_df_sorted_genes, " genes", sep="")))
         ## Step Two: Extract results for main effect of condition plus the interaction term:
         interaction <- c(paste("casteworkers.treatment", pesticide, sep=""))
         results_tmp_2 <- results(deseq_object, 
@@ -245,6 +244,7 @@ rld <- rlog(deseq_object, blind = FALSE)
 
 # this gives log2(n + 1)
 ntd        <- normTransform(deseq_object)
+
 ## Basic plot:
 plotPCA(vsd, intgroup = c("treatment"))
 ## Extract first and second principal components:
@@ -252,15 +252,22 @@ pca_data    <- plotPCA(vsd, intgroup = c("treatment"), returnData = TRUE)
 ## Extract percentages for first two principal components:
 percentVar <- round(100 * attr(pca_data, "percentVar"))
 
+## Create a variable 'caste':
+pca_data$caste <- gsub(".*_", "", pca_data$name)
+pca_data$name <- gsub("_queens", "_Q", pca_data$name)
+pca_data$name <- gsub("_workers", "_W", pca_data$name)
+
 ## Plot PCA:
-ggplot(pca_data, aes(PC1, PC2, color = treatment, fill = treatment)) +
-       geom_point(size = 5, shape = 16) +
+ggplot(pca_data, aes(PC1, PC2, color = treatment, shape = caste)) +
+       geom_point(size = 5) +
        xlab(paste0("PC1: ",percentVar[1],"% variance")) +
        ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
        coord_fixed() +
-       scale_color_manual(values = c("blue", "grey", "black")) +
+       scale_color_manual(values = c("blue", "grey", "black", "red", "green")) +
        theme_bw() +
-       geom_text(label = pca_data$name) +
+       #geom_text(label = pca_data$name) +
        theme(axis.title = element_text(family = "Arial", color = "#666666", face = "bold", size = 16)) 
-    
+   
+## Save:
+ggsave(filename = "pca_plot_castes.png")
 ```
