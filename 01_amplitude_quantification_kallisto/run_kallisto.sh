@@ -1,9 +1,7 @@
 #!/bin/env bash
 ##################################################################################################
 ##
-## Author:                                                            name:run_kallisto.sh
-##
-## Date: 
+##  name:run_kallisto.sh
 ##
 ## Purpose:
 ## This script the following commands:
@@ -25,13 +23,12 @@
 #Filenames are like 
 #2016-Bter-CTH-C60-4-W1-head.D711_D506.HM3WHBBXX.s_6.R1.fastq.gz
 #2016-Bter-CYH-C03-4-Q-head.D711_D503.HM3WHBBXX.s_6.R1.fastq.gz 
+
 ## Create directory on scratch:
-#mkdir ~/scratch/2018-09-19-kallisto_actualworkers
+mkdir ~/scratch/2018-09-19-kallisto_actualworkers
 ## Soft Link 
-#ln -s ~/scratch/2018-09-19-kallisto_actualworkers tmp
+ln -s ~/scratch/2018-09-19-kallisto_actualworkers tmp
 ##
-# for W, some issue with colony name for CON (manually renamed), and CYH-C43 has 1 fewer file than others (asked Joe)
-#
 # Note to self. to create an array the folowing is preferred;
 #    fastqs=(input/fastq_all/2016-Bter-${treatment}*-W[1-4]-*gz)   but not using here bc i need ot use them after
 ##================================================================================================
