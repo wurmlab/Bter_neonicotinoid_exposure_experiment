@@ -1,22 +1,18 @@
 ## Load parallel:
 module load parallel
 
-##====================================================================================================
-## COMMANDS TO REMOVE:
-##====================================================================================================
 ## Link output from splice alignment folder and use as input:
-# ln -s ../2018-11-30-spliced_alignment_queen-tmp/tmp/quant/ input
-#
-# Link folder containing temporary files required for running DEXSeq:
-# ln -s ../2018-11-30_spliced_alignment_queen-tmp/tmp/ .
-#
-## Create soft link for dexseq python scripts:
-# ln -s ../../soft/DEXSeq_python1.26.0 dexseq_py
-#
-# ln -s ../2018-11-30-spliced_alignment_worker/htseq .
-##====================================================================================================
+ln -s ../2018-11-30-spliced_alignment_queen-tmp/tmp/quant/ input
 
-## For implementing DEXSeq commands, a virtual environment is required: 
+## Link folder containing temporary files required for running DEXSeq:
+ln -s ../2018-11-30_spliced_alignment_queen-tmp/tmp/ .
+
+## Create soft link for dexseq python scripts:
+ln -s ../../soft/DEXSeq_python1.26.0 dexseq_py
+
+## Create soft link to virtual environment for running python scripts:
+ln -s ../2018-11-30-spliced_alignment_worker/htseq .
+
 ## Activate virtual environment:
 source ./htseq/bin/activate
 
