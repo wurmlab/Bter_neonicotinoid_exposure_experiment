@@ -235,3 +235,32 @@ for (pesticide in non_control_treatments){
         print(c(paste("Total number of genes:", diff_across_castes_df_sorted_genes)))
 }
 ```
+
+Generate a PCA using all samples:
+
+```{r}
+## Extracting transformed values from DESeq object:
+vsd <- vst(deseq_object, blind = FALSE)
+rld <- rlog(deseq_object, blind = FALSE)
+
+# this gives log2(n + 1)
+ntd        <- normTransform(deseq_object)
+## Basic plot:
+plotPCA(vsd, intgroup = c("treatment"))
+## Extract first and second principal components:
+pca_data    <- plotPCA(vsd, intgroup = c("treatment"), returnData = TRUE)
+## Extract percentages for first two principal components:
+percentVar <- round(100 * attr(pca_data, "percentVar"))
+
+## Plot PCA:
+ggplot(pca_data, aes(PC1, PC2, color = treatment, fill = treatment)) +
+       geom_point(size = 5, shape = 16) +
+       xlab(paste0("PC1: ",percentVar[1],"% variance")) +
+       ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+       coord_fixed() +
+       scale_color_manual(values = c("blue", "grey", "black")) +
+       theme_bw() +
+       geom_text(label = pca_data$name) +
+       theme(axis.title = element_text(family = "Arial", color = "#666666", face = "bold", size = 16)) 
+    
+```
