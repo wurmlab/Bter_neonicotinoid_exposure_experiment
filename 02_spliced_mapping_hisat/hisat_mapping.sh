@@ -1,10 +1,13 @@
-#module load gcc/7.1.0 
+## Load required modules:
+module load gcc/7.1.0 
 
-#ln -s ../../soft/hisat2-2.1.0/hisat2-build
-#ln -s ../../soft/hisat2-2.1.0/hisat2
+## Create soft links for required software:
+ln -s ../../soft/hisat2-2.1.0/hisat2-build
+ln -s ../../soft/hisat2-2.1.0/hisat2
 
-#mkdir ~/scratch/
-#ln -s ~/scratch/hisat_w tmp
+## Make temporary directory on scratch and link to working directory:
+mkdir ~/scratch/
+ln -s ~/scratch/hisat_w tmp
 
 ## For the purpose of performing splice-aware aligments, exon locations are required to be extracted
 ## from a user-provided annotation file (gtf file).  
