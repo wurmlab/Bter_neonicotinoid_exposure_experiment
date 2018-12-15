@@ -141,11 +141,16 @@ cor.test(combined.df$kallisto, combined.df$hisat_htseq)
 ## Calculate the difference between the gene-level counts:
 combined.df$difference <- combined.df$kallisto - combined.df$hisat_htseq
 
-## Generate plot:
-ggplot(data = combined.df, aes(x=kallisto, y = hisat_htseq)) +
+plot<- ggplot(data = combined.df, aes(x=kallisto, y = hisat_htseq)) +
         geom_point() +
         xlab("Kallisto gene-level counts") +
         ylab("HISAT2 HTSeq gene-level counts") +
+        geom_smooth(method='lm',formula=y~x) +
         theme_bw()
         
+## Increase font size for text labels:
+plot <- plot + theme(axis.title=element_text(face="bold",size="14"))
+
+## Save to file:
+ggsave(file = "correlation_plot.png")        
 ```
