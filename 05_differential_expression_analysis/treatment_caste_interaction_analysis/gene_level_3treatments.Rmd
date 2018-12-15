@@ -446,26 +446,3 @@ ggsave(filename = "pca_plot_castes.png")
 ```
 
 Following a tutorial: https://rpubs.com/ge600/deseq2
-
-An additional question is the difference in expression between castes:
-
-```{r, message=FALSE}
-## Difference between castes irrespective of treatment:
-caste_without_treatment <- results(deseq_object, contrast=c("caste","queens","workers"))
-caste_without_treatment_df <- as.data.frame(caste_without_treatment)
-nrow(subset(caste_without_treatment_df, padj < 0.05))
-
-## With treatment, what is the difference between the castes?
-caste_with_clo = results(deseq_object, list( c("caste_queens_vs_workers","castequeens.treatmentCLO") ))
-caste_with_clo_df <- as.data.frame(caste_with_clo)
-ix = which.min(caste_with_clo$padj)
-caste_with_clo <- caste_with_clo[order(caste_with_clo$padj),]
-barplot(assay(deseq_object)[ix,],las=2, main=rownames(deseq_object)[ ix  ]  )
-nrow(subset(caste_with_clo_df, padj < 0.05))
-
-## Do the castes response differently to treatment?
-interaction = results(deseq_object, name="castequeens.treatmentCLO")
-ix = which.min(interaction$padj)
-interaction <- interaction[order(interaction$padj),]
-barplot(assay(deseq_object)[ix,],las=2, main=rownames(deseq_object)[ ix  ]  )
-```
