@@ -108,10 +108,12 @@ Because we do a gene-level analysis first, transcript abundances are summarised 
 
 ```{r}
 # Read in file corresponding to transcripts to gene ids
-ensembl <- useMart("metazoa_mart", host = "metazoa.ensembl.org")
-ensembl <- useDataset("bterrestris_eg_gene", mart = ensembl)
+ensembl = useMart(biomart = "metazoa_mart", host = "jul2018-metazoa.ensembl.org",
+                  dataset = "bterrestris_eg_gene")
+
 transcript_to_gene <- getBM(attributes = c("ensembl_transcript_id", "ensembl_gene_id"), 
                             mart = ensembl)
+
 # Use tximport on kallisto files 
 ## Counts are estimated counts from kallisto:
 txi_counts <- tximport(paths$kallisto_files, 
@@ -119,9 +121,13 @@ txi_counts <- tximport(paths$kallisto_files,
                        tx2gene = transcript_to_gene,
                        countsFromAbundance = "no")
 
-## 
+## Count the number of genes per input data.frame:
 nrow(txi_counts$counts)
 nrow(hisat_htseq_counts_all)
+
+## Remove tags:
+MetaTags <- grep("^__", rownames(hisat_htseq_counts_all))
+hisat_htseq_counts_all <- hisat_htseq_counts_all[-MetaTags, ]
 
 ## Match and extract only genes found in both hisat and kallisto counts:
 txi_counts_df <- as.data.frame(txi_counts$counts[match(rownames(hisat_htseq_counts_all), rownames(txi_counts$counts)), ])
@@ -132,15 +138,21 @@ hisat_htseq_counts_all$mean <- rowMeans(hisat_htseq_counts_all)
 
 ## Combine rowsums:
 combined.df <- as.data.frame(cbind(txi_counts_df$mean, hisat_htseq_counts_all$mean))
+rownames(combined.df) <- rownames(txi_counts_df)
 
+## Update column names:
 colnames(combined.df) <- c("kallisto", "hisat_htseq")
 
 ## Check correlation:
 cor.test(combined.df$kallisto, combined.df$hisat_htseq)
 
 ## Calculate the difference between the gene-level counts:
-combined.df$difference <- combined.df$kallisto - combined.df$hisat_htseq
+combined.df$average_across_datasets <- rowMeans(combined.df)
+## Reorder by count:
+combined.df <- combined.df[order(combined.df$average_across_datasets), ]
+tail(combined.df)
 
+## Generate plot:
 plot<- ggplot(data = combined.df, aes(x=kallisto, y = hisat_htseq)) +
         geom_point() +
         xlab("Kallisto gene-level counts") +
@@ -150,7 +162,8 @@ plot<- ggplot(data = combined.df, aes(x=kallisto, y = hisat_htseq)) +
         
 ## Increase font size for text labels:
 plot <- plot + theme(axis.title=element_text(face="bold",size="14"))
+plot
 
 ## Save to file:
-ggsave(file = "correlation_plot.png")        
+ggsave(file = "correlation_plot.png")
 ```
