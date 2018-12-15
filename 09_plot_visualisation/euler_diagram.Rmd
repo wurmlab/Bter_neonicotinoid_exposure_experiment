@@ -1,0 +1,93 @@
+---
+title: "Venn Diagrams"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#install.packages("eulerr")
+libraries <- c("eulerr", "ggplot2")
+
+for (lib in libraries) {
+    if (require(package = lib, character.only = TRUE)) {
+        print("Successful")
+    } else {
+        print("Installing")
+        source("https://bioconductor.org/biocLite.R")
+#        biocLite(pkgs = lib)
+        library(lib, character.only = TRUE )
+    }
+}
+## Create output directory:
+dir.create("results")
+```
+
+## R Markdown
+
+```{r }
+#read all 8 tables
+## Read in files containing gene lists of alterntive splicing/differential exon usage output:
+genelists_alt_splicing_directory <- "alternative_splicing"
+splicing_worker_clo <- read.table(file = file.path(genelists_alt_splicing_directory,
+                                                      "dexseq_object_results_all_CLO_batch_room_corrected_pvalues_sig_worker_gene_list.txt"), 
+                                     head      = FALSE, 
+                                     col.names = "ids")$ids
+
+splicing_worker_imi <- read.table(file = file.path(genelists_alt_splicing_directory, 
+                                                      "dexseq_object_results_all_IMI_batch_room_corrected_pvalues_sig_worker_gene_list.txt"), 
+                                     head      = FALSE, 
+                                     col.names = "ids")$ids
+
+splicing_queen_clo  <- read.table(file = file.path(genelists_alt_splicing_directory, 
+                                                      "dexseq_object_results_all_CLO_batch_room_corrected_pvalues_sig_queen_gene_list.txt"), 
+                                     head      = FALSE, 
+                                     col.names = "ids")$ids
+
+splicing_queen_imi  <- read.table(file = file.path(genelists_alt_splicing_directory,
+                                                      "dexseq_object_results_all_IMI_batch_room_corrected_pvalues_sig_queen_gene_list.txt"), 
+                                     head      = FALSE, 
+                                     col.names = "ids")$ids
+
+## Read in files from the results of amplitude/differential expression analysis:
+genelists_diff_expression_directory <- "amplitude_differences"
+
+de_worker_clo    <- read.table(file = file.path(genelists_diff_expression_directory, 
+                                                      "CLO_vs_CON_significant_corrected_for_batch_and_room_worker_gene_list.txt"), 
+                                     head      = FALSE, 
+                                     col.names = "ids")$ids
+
+de_worker_imi    <- read.table(file = file.path(genelists_diff_expression_directory, 
+                                                      "IMI_vs_CON_significant_corrected_for_batch_and_room_worker_gene_list.txt"), 
+                                     head      = FALSE, 
+                                     col.names = "ids")$ids
+
+de_queen_clo    <- read.table(file = file.path(genelists_diff_expression_directory, 
+                                                      "CLO_vs_CON_significant_corrected_for_batch_and_room_queen_gene_list.txt"), 
+                                     head      = FALSE, 
+                                     col.names = "ids")$ids
+
+de_queen_imi    <- read.table(file = file.path(genelists_diff_expression_directory, 
+                                                      "IMI_vs_CON_significant_corrected_for_batch_and_room_queen_gene_list.txt"), 
+                                     head      = FALSE, 
+                                     col.names = "ids")$ids
+
+
+## Combine lists:
+venneu <- euler(combinations = list("Worker\nclothianidin" = de_worker_clo, 
+                                    "Queen\nclothianidin" = de_queen_clo, 
+                                    "Worker imidacloprid" = de_worker_imi,
+                                    "Queen\nimidacloprid" = de_queen_imi,
+                                    "Worker clothianidin\nsplicing" = splicing_worker_clo,
+                                    "Worker imidacloprid\nsplicing" = splicing_worker_imi,
+                                    "Queen clothianidin\nsplicing" = splicing_queen_clo,
+                                    "Queen imidacloprid\nsplicing" = splicing_queen_imi))
+
+
+## Generate plot:
+plot(venneu,
+  quantities = TRUE,
+  edges=TRUE,
+  labels = list(fontsize = 8))
+```
