@@ -1,0 +1,60 @@
+--- 
+title: "plot_DEGs_heatmap.Rmd"
+author: Joe Colgan
+copyright: Queen Mary University of London
+--- 
+
+## Introduction:
+
+This script is for exploratory analysis of transcript quantification data and results of differential gene expression analysis.
+Input files should be R objects saved and generated from previous scripts of DE analysis, including the object resulting from using tximport() on kallisto files, the significant transcript abundances selected from this object and a results table of significant genes, generated using DESeq2. 
+This script will organise input data for generating heatmaps of significantly differentially expressed genes, based on statistical significance and log fold changes in expression. This script produces a heatmap that can be exported. 
+
+```{r, message=FALSE}
+# Load libraries; install from scratch if needed
+libraries <- c("ggplot2", "gplots", "heatmap3", "ggfortify", "rentrez",
+               "reshape2", "scales", "ggpubr", "grid", "XML")
+for (lib in libraries) {
+    if (require(package = lib, character.only = TRUE)) {
+        print("Successful")
+    } else {
+        print("Installing")
+        source("https://bioconductor.org/biocLite.R")
+        biocLite(pkgs = lib)
+        library(lib, character.only = TRUE )
+    }
+}
+
+## Load custom function:
+source("../../code/utility/description_from_LOCid.R")
+source("../../code/utility/helper_functions_for_heatmaps.R")
+
+## Assign path for output:
+output <- "results/heatmap_figure"
+dir.create(output, recursive = TRUE)
+```
+
+## Step One: Load files containing raw count estimates and differentially expressed genes:
+At present this script only plots heatmaps for one pesticide and one control treatment. 
+The script generates heatmap plots for two castes: workers and queens.
+
+```{r, message = FALSE}
+## Define treatments for plotting:
+pesticide = "clothianidin"
+control = "control"
+
+## Define castes for plotting:
+castes = c("workers", "queens")
+
+## Generate a function for plotting by caste:
+## Combine plot:
+ggarrange(caste_plotter(castes[1]), caste_plotter(castes[2]),
+                           align = "hv",
+                           nrow = 2, ncol = 1,
+                           heights = c(3.0,1.0),
+                           common.legend = TRUE,
+                           legend = "top")
+
+## Save output:
+ggsave("results/heatmap_figure/combined_worker_queen_heatmap.png", width = 20, height = 18)
+```
