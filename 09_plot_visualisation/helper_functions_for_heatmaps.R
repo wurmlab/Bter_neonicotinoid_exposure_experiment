@@ -5,7 +5,7 @@
 ## All rights reserved
 ##
 ################################################################################################
-## The following scripts are used by plot_heatmap.Rmd to generate a combined heatmap
+## The following scripts are used by plot_DEGs_heatmap.Rmd to generate a combined heatmap
 ## for both bumblebee castes.  
 
 ## Define function for plotting of heatmap:
