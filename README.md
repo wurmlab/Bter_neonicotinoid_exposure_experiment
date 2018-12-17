@@ -6,8 +6,8 @@ Caste- and pesticide-specific effects of neonicotinoid pesticide exposure on gen
 
 ## License
 
-Reuse of scripts requires:  
-1) Citation of the associated publication.   
+This work is distributed under the GPLv3 license. The reuse of code derived from this repository thus requires two things:
+1) Proper attribution (i.e., citation of the associated publication).
 2) Publication of reused scripts on an open-access platform, such as Github.  
 
 ## Workflow
