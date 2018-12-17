@@ -31,7 +31,7 @@ At present, the script only analyses go terms enriched within clothianidin-expos
 
 ```{r, message = FALSE}
 ## Load helper functions:
-source("./barchart_helper_functions.R")
+source("./helper_functions_for_barcharts.R")
 
 ## Define pesticide and control treatments:
 pesticide <- "clothianidin"
