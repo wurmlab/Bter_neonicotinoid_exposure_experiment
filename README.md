@@ -1,12 +1,16 @@
-## Introduction
+## What is this?
 
 This repository contains all scripts used for the differential expression analysis of _Bombus terrestris_ castes in response to neonicotinoid exposure as reported in:  
 Colgan, T.J., Fletcher, I.K., Arce, A.N., Gill, R.J., Ramos Rodrigues, A., Stolle, E., Chittka, L. and Wurm, Y.  
 Caste- and pesticide-specific effects of neonicotinoid pesticide exposure on gene expression in bumblebees.   
 
-LICENSE: Reuse of scripts will require:  
+## License
+
+Reuse of scripts requires:  
 1) Citation of the associated publication.   
 2) Publication of reused scripts on an open-access platform, such as Github.  
+
+## Workflow
 
 Analysis workflow consisted of:  
 1. Pseudoalignment and transcript quantification using kallisto.   
