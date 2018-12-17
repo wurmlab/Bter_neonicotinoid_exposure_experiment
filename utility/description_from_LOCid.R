@@ -11,19 +11,26 @@ description_from_LOCid <- function(gene_ids) {
 
   library(rentrez)
 
-  gene_ncbi_info <- entrez_fetch(db="gene", id = gene_ids, rettype="xml", parsed=TRUE)
+  gene_ncbi_info <- entrez_fetch(db = "gene",
+                                 id = gene_ids,
+                                 rettype = "xml",
+                                 parsed = TRUE)
 
-  tmp_ids <- xpathSApply(doc = gene_ncbi_info, 
-                         path = "//Entrezgene_gene/Gene-ref/Gene-ref_locus", 
+  tmp_ids <- xpathSApply(doc = gene_ncbi_info,
+                         path = "//Entrezgene_gene/Gene-ref/Gene-ref_locus",
                          xmlValue)
 
-  tmp_description <- xpathSApply(doc = gene_ncbi_info, 
-                                 path = "//Entrezgene_gene/Gene-ref/Gene-ref_desc", 
+  tmp_description <- xpathSApply(doc = gene_ncbi_info,
+                                 path = "//Entrezgene_gene/Gene-ref/Gene-ref_desc",
                                  xmlValue)
 
-  tmp_description_clean <- gsub(pattern = " LOC[0-9]+", replacement = "", x = tmp_description)
+  tmp_description_clean <- gsub(pattern = " LOC[0-9]+",
+                                replacement = "",
+                                x = tmp_description)
 
   desc_for_fig <- paste(tmp_ids, tmp_description_clean, sep = ": ")
 
-  return(data.frame(id = tmp_ids, description = tmp_description, both = desc_for_fig))
+  return(data.frame(id = tmp_ids,
+                    description = tmp_description,
+                    both = desc_for_fig))
 }
