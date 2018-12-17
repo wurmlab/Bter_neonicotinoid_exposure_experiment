@@ -43,7 +43,7 @@ Load in genelist and database files.
 ```{r}
 ## Step One
 ## GO annotations
-gene_to_go_mapping_file <- "go_term_database_bter_dmel_orthologues_ensembl.txt"
+gene_to_go_mapping_file <- "dmel_vs_bter_biomart.input_for_converter.output.txt"
 
 ## file of significant genes (2 column file: i.e. gene id and pvalue) file:
 de_genes_file <- "input/input_for_go_term_analysis/wald_clo/de_genes_for_topGO.txt"
