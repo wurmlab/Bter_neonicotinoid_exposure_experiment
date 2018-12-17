@@ -1,8 +1,8 @@
 ---
 title: "dexseq_analysis"
+output: dexseq_analysis.html
 author: "JoeColgan"
-date: "14 May 2018"
-output: html_document
+copyright: Queen Mary University of London
 ---
 
 ## Introduction
