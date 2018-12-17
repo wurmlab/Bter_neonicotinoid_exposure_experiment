@@ -42,7 +42,7 @@ We use raw, non-normalised estimated counts.
 ```{r} 
 ## Set paths to folders containing output files from kallisto
 paths <- list()
-paths$sample_batch_info <- "input/room_batch_information_per_sample-clean.txt"
+paths$sample_batch_info <- "input/sample_information.txt"
 paths$kallisto_output   <- "input/kallisto_quantifications"
 
 # Set relative paths:
