@@ -42,7 +42,7 @@ We use raw, non-normalised estimated counts.
 ```{r} 
 ## Set paths to folders containing output files from kallisto
 paths <- list()
-paths$sample_batch_info <- "./room_batch_information_per_sample-clean.combined.reordered.txt"
+paths$sample_batch_info <- "./sample_information.txt"
 paths$kallisto_output   <- "input"
 # Set relative paths:
 paths$kallisto_files_relative <- grep(x       = list.files(paths$kallisto_output, recursive = TRUE),
