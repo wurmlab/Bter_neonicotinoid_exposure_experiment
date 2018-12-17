@@ -1,6 +1,8 @@
 --- 
 title: "Bombus pesticide exposure: gene expression in head"
 output: gene_level_3treatments.html
+author: Joe Colgan
+copyright: Queen Mary University of London
 --- 
 
 # Introduction
