@@ -1,7 +1,11 @@
 #!/bin/env bash
 ##################################################################################################
 ##
-##  name:run_kallisto.sh
+## Author: Yannick Wurm
+## Queen Mary University of London
+## All rights reserved
+##
+## name:run_kallisto.sh
 ##
 ## Purpose:
 ## This script the following commands:
@@ -17,9 +21,6 @@
 ## 3) run_info.json: A json file containing information on the run.  
 ##
 ##################################################################################################
-##================================================================================================
-## REMOVE THIS FOR PUBLICATION REPOSITORY?
-##================================================================================================
 #Filenames are like 
 #2016-Bter-CTH-C60-4-W1-head.D711_D506.HM3WHBBXX.s_6.R1.fastq.gz
 #2016-Bter-CYH-C03-4-Q-head.D711_D503.HM3WHBBXX.s_6.R1.fastq.gz 
