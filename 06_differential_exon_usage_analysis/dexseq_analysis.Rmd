@@ -1,8 +1,7 @@
 ---
 title: "dexseq_analysis"
 output: dexseq_analysis.html
-author: "JoeColgan"
-copyright: Queen Mary University of London
+author: JoeColgan http://wurmlab.com
 ---
 
 ## Introduction
@@ -10,7 +9,7 @@ This script is for differential exon usage analysis of exon quantification data.
 
 This script will import count files from HTSeq and use the R package DEXSeq to test for differential exon usage. This script produces a results table of genes that are significantly differentially expressed. This script uses the LRT test in DEXSeq to test for differential exon usage between treatments, which is the only option provided for analysis. Unlike DESeq2, there is no Wald test comparison. 
 
-```{r, message= FALSE}
+```{r, message = FALSE}
 ## Load libraries:
 libraries <- c("DEXSeq", "ggplot2", "ggpubr", "DESeq2")
 for (lib in libraries) {
@@ -30,19 +29,19 @@ We used HTSeq to extract read counts for each exon bin.
 
 ```{r, message = FALSE}
 ## Read in files:
-countFiles = list.files("./results", 
-                        pattern="sam.counts$", 
-                        full.names=TRUE)
+countfiles <- list.files("./results",
+                        pattern = "sam.counts$",
+                        full.names = TRUE)
 
 ## Read in GFF containing exon information:
-flattenedFile = list.files("./results", 
-                        pattern="gff$", 
-                        full.names=TRUE)
+flattenedfile <- list.files("./results",
+                        pattern = "gff$",
+                        full.names = TRUE)
 
 ## Extraction the name of treatments present within the data files:
-countFiles_tmp <- gsub("-.*", "", countFiles)
-treatments <- unique(gsub("./results/", "", countFiles_tmp))
-control = "CON"
+countfiles_tmp <- gsub("-.*", "", countfiles)
+treatments <- unique(gsub("./results/", "", countfiles_tmp))
+control <- "CON"
 non_control_treatments <- treatments[ !treatments %in% control]
 ```
 
@@ -53,7 +52,8 @@ non_control_treatments <- treatments[ !treatments %in% control]
 suppressPackageStartupMessages( library( "DEXSeq" ) )
 
 ## Read in batch information:
-samples_information <- read.table(file = "./room_batch_information_per_sample-clean.txt", header= FALSE)
+samples_information <- read.table(file = "./sample_information.txt",
+                                  header = FALSE)
 
 ## Update header information:
 colnames(samples_information) <- c("sample_name", "treatment", "room", "batch")
@@ -68,7 +68,8 @@ samples_information$sample_name <- NULL
 rownames(samples_information) <- gsub("-", "_", rownames(samples_information))
 
 ## Make sure 'CON' is the reference:
-samples_information$treatment <- relevel(x = samples_information$treatment, ref = "CON") 
+samples_information$treatment <- relevel(x = samples_information$treatment,
+                                         ref = "CON")
 ```
 
 ## Step Three: Create a dexseq object for differential exon usage analysis
@@ -80,85 +81,91 @@ We create a dexseq object using:
 
 ```{r, message = FALSE}
 ## Create models for testing:
-formulaFullModel= ~sample+exon+batch:exon+room:exon+treatment:exon
-formulaReducedModel= ~sample+exon+batch:exon+room:exon
+formulafullmodel <- ~sample + exon + batch:exon + room:exon + treatment:exon
+formulareducedmodel <- ~sample + exon + batch:exon + room:exon
 
 ## For each pesticide treatment:
 for (pesticide in non_control_treatments){
-        ## Extract input files related to treatment of interest as well as control samples:
-        countFiles_tmp<- c(grep(pesticide, countFiles, value = TRUE),
-                           grep(control, countFiles, value = TRUE))
-        print(countFiles_tmp)
-        ## Extract sample information related to treatment of interest as well as control samples:
-        sampleInfo_tmp<- rbind(subset(samples_information, treatment == pesticide), 
-                               subset(samples_information, treatment == control))
-        print(sampleInfo_tmp)
+        ## Extract input files related to treatment of interest as well
+        ## as control samples:
+        countfiles_tmp <- c(grep(pesticide, countfiles, value = TRUE),
+                           grep(control, countfiles, value = TRUE))
+        print(countfiles_tmp)
+        ## Extract sample information related to treatment of interest
+        ## as well as control samples:
+        sampleinfo_tmp <- rbind(subset(samples_information,
+                                       treatment == pesticide),
+                               subset(samples_information,
+                                      treatment == control))
+        print(sampleinfo_tmp)
         ## Create DEXSeq object:
-        dexseq_object = DEXSeqDataSetFromHTSeq(
-                        countFiles_tmp,
-                        sampleData=sampleInfo_tmp,
-                        design= ~ sample + exon + treatment:exon,
-                        flattenedfile=flattenedFile)
+        dexseq_object <- DEXSeqDataSetFromHTSeq(
+                        countfiles_tmp,
+                        sampleData = sampleinfo_tmp,
+                        design = ~ sample + exon + treatment:exon,
+                        flattenedfile = flattenedfile)
         ## Normalisation of exon counts by library sizes:
-        dexseq_object = estimateSizeFactors(dexseq_object)
+        dexseq_object <- estimateSizeFactors(dexseq_object)
         ## Estimate dispersion values:
-        dexseq_object = estimateDispersions(dexseq_object, 
-                                    formula = formulaFullModel)
+        dexseq_object <- estimateDispersions(dexseq_object,
+                                    formula = formulafullmodel)
         ## Test for differential exon usage between treatment groups:
-        dexseq_object = testForDEU(dexseq_object,
-                           reducedModel = formulaReducedModel,
-                           fullModel = formulaFullModel)
+        dexseq_object <- testForDEU(dexseq_object,
+                           reducedModel = formulareducedmodel,
+                           fullModel = formulafullmodel)
         ## Estimation of fold changes in exon usage between treatments:
-        dexseq_object = estimateExonFoldChanges(dexseq_object, 
-                                                fitExpToVar="treatment")
+        dexseq_object <- estimateExonFoldChanges(dexseq_object,
+                                                fitExpToVar = "treatment")
         ## Subset results:
-        dexseq_object_results = DEXSeqResults(dexseq_object)
+        dexseq_object_results <- DEXSeqResults(dexseq_object)
         dexseq_object_results_df <- as.data.frame(dexseq_object_results)
-        
         ## Create a directory for output:
-        output_directory =  paste("results/", pesticide, "_differential_exon_raw_all/", sep="")
-        dir.create(path = output_directory, recursive = TRUE)
-        
+        output_directory <-  paste("results/", pesticide,
+                                   "_differential_exon_raw_all/", sep = "")
+        dir.create(path = output_directory,
+                   recursive = TRUE)
         ## Write results to file:
         write.table(dexseq_object_results_df,
-            file = paste(output_directory, "dexseq_object_results_all_", pesticide, "_batch_room_corrected.txt",sep=""),
+            file = paste(output_directory, "dexseq_object_results_all_",
+                         pesticide, "_batch_room_corrected.txt",
+                         sep = ""),
             row.names = FALSE,
             col.names = TRUE,
-            sep="\t",
+            sep = "\t",
             quote = FALSE)
-        
         ## Subset columns of interest (groupID, pvalue and padj)
-        dexseq_object_results_pvalues <- dexseq_object_results_df[,c(1,6,7)]
+        dexseq_object_results_pvalues <- dexseq_object_results_df[, c(1, 6, 7)]
         write.table(dexseq_object_results_pvalues,
-            file = paste(output_directory, "dexseq_object_results_all_", pesticide, "_batch_room_corrected_pvalues.txt",sep=""),
+            file = paste(output_directory, "dexseq_object_results_all_",
+                         pesticide, "_batch_room_corrected_pvalues.txt",
+                         sep = ""),
             row.names = FALSE,
             col.names = TRUE,
-            sep="\t",
+            sep = "\t",
             quote = FALSE)
-        
 }
 ```
 
 Additional code for visualisation of significant DEU genes:
 
 ```{r, message = FALSE}
-## M-A plot:
-plotMA(dexseq_object_results, 
-       cex=0.8, 
-       alpha=0.05, 
-       ylim=c(-5, 5))
+# Plot MA-plot
+plotMA(dexseq_object_results,
+       cex = 0.8,
+       alpha = 0.05,
+       ylim = c(-5, 5))
 
 ## Sort data by significance for the visualisation of DE:
-dexseq_object_results_significant_reordered <- dexseq_object_results_df[order(dexseq_object_results_df$padj), ]
+dexseq_object_results_sig <- dexseq_object_results_df[order(dexseq_object_results_df$padj), ]
 
 # For examination of DEU for individual genes, use:
-plotDEXSeq(dexseq_object_results, 
-           geneID=dexseq_object_results_significant_reordered$groupID[[1]], 
-           fitExpToVar="treatment",
+plotDEXSeq(dexseq_object_results,
+           geneID = dexseq_object_results_sig$groupID[[1]],
+           fitExpToVar = "treatment",
            norCounts = TRUE,
            displayTranscripts = TRUE,
-           legend=TRUE, 
-           cex.axis=1.2, 
-           cex=1.3, 
-           lwd=2 )
+           legend = TRUE,
+           cex.axis = 1.2,
+           cex = 1.3,
+           lwd = 2)
 ```
