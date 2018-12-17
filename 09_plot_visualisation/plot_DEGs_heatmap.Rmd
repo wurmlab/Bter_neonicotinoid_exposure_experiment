@@ -1,7 +1,7 @@
 --- 
-title: "plot_DEGs_heatmap.Rmd"
-author: Joe Colgan
-copyright: Queen Mary University of London
+title: "Bombus pesticide exposure: gene expression in head"
+output: plot_DEGs_heatmap.html
+author: Isabel Fletcher, Joe Colgan, Yannick Wurm http://wurmlab.com
 --- 
 
 ## Introduction:
@@ -12,15 +12,16 @@ This script will organise input data for generating heatmaps of significantly di
 
 ```{r, message=FALSE}
 # Load libraries; install from scratch if needed
-libraries <- c("ggplot2", "gplots", "heatmap3", "ggfortify", "rentrez",
-               "reshape2", "scales", "ggpubr", "grid", "XML")
+libraries <- c("ggplot2", "gplots", "heatmap3",
+               "ggfortify", "rentrez",
+               "reshape2", "scales", "ggpubr",
+               "grid", "XML")
 for (lib in libraries) {
     if (require(package = lib, character.only = TRUE)) {
         print("Successful")
     } else {
         print("Installing")
         source("https://bioconductor.org/biocLite.R")
-        biocLite(pkgs = lib)
         library(lib, character.only = TRUE )
     }
 }
@@ -40,21 +41,22 @@ The script generates heatmap plots for two castes: workers and queens.
 
 ```{r, message = FALSE}
 ## Define treatments for plotting:
-pesticide = "clothianidin"
-control = "control"
+pesticide <- "clothianidin"
+control   <- "control"
 
 ## Define castes for plotting:
-castes = c("workers", "queens")
+castes <- c("workers", "queens")
 
 ## Generate a function for plotting by caste:
 ## Combine plot:
 ggarrange(caste_plotter(castes[1]), caste_plotter(castes[2]),
                            align = "hv",
                            nrow = 2, ncol = 1,
-                           heights = c(3.0,1.0),
+                           heights = c(3.0, 1.0),
                            common.legend = TRUE,
                            legend = "top")
 
 ## Save output:
-ggsave("results/heatmap_figure/combined_worker_queen_heatmap.png", width = 20, height = 18)
+ggsave("results/heatmap_figure/combined_worker_queen_heatmap.png",
+       width = 20, height = 18)
 ```
