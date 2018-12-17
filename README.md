@@ -1,13 +1,14 @@
-## What is this?
+## Context & citation
 
-This repository contains all scripts used for the differential expression analysis of _Bombus terrestris_ castes in response to neonicotinoid exposure as reported in:  
+This repository contains all scripts used for the differential expression analysis of _Bombus terrestris_ workers and queens in response to neonicotinoid exposure. This was developed as part of a NERC-funded project reported implemented in [Yannick Wurm's lab at Queen Mary University of London](http://wurmlab.com). Findings are reported in the following manuscript: 
+
 Colgan, T.J., Fletcher, I.K., Arce, A.N., Gill, R.J., Ramos Rodrigues, A., Stolle, E., Chittka, L. and Wurm, Y.  
-Caste- and pesticide-specific effects of neonicotinoid pesticide exposure on gene expression in bumblebees.   
+**Caste- and pesticide-specific effects of neonicotinoid pesticide exposure on gene expression in bumblebees**. *in prep*.  
 
 ## License
 
-This work is distributed under the GPLv3 license. The reuse of code derived from this repository thus requires two things:
-1) Proper attribution (i.e., citation of the associated publication).
+This work is distributed under the [GPLv3 license](LICENSE). Reuse of code derived from this repository is permitted under two conditions: 
+1) Proper attribution (i.e., citation of the associated publication; see [CITATION.cff](CITATION.cff) and above).
 2) Publication of reused scripts on an open-access platform, such as Github.  
 
 ## Workflow
