@@ -1,3 +1,10 @@
+############################################################################################
+##
+## Author: Joe Colgan
+## Queen Mary University of London
+## All rights reserved
+############################################################################################
+
 ## Required: MultiQC file for HISAT2 alignments:
 module load samtools/1.3.1
 module load qualimap/2.2.1 
