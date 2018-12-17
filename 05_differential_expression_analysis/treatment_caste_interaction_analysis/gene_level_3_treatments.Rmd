@@ -1,8 +1,7 @@
 --- 
 title: "Bombus pesticide exposure: gene expression in head"
-output: gene_level_3treatments.html
-author: Joe Colgan
-copyright: Queen Mary University of London
+output: gene_level_3_treatments.html
+author: Joe Colgan http://wurmlab.com
 --- 
 
 # Introduction
@@ -17,18 +16,18 @@ This script produces a results table of genes that are significantly differentia
 This script uses the Wald test in DESeq2 to test for differential expression between treatments.
 This can then be used for further analysis. 
 
-
 ```{r, message = FALSE}
 # Load libraries; install from scratch if needed
-libraries <- c("tximport", "readr", "DESeq2", "ggplot2", "gplots", "rhdf5",
-               "plyr", "ggfortify", "biomaRt", "vsn", "RColorBrewer", "ReportingTools")
+libraries <- c("tximport", "readr", "DESeq2",
+               "ggplot2", "gplots", "rhdf5",
+               "plyr", "ggfortify", "biomaRt",
+               "vsn", "RColorBrewer", "ReportingTools")
 for (lib in libraries) {
     if (require(package = lib, character.only = TRUE)) {
         print("Successful")
     } else {
         print("Installing")
         source("https://bioconductor.org/biocLite.R")
-#        biocLite(pkgs = lib)
         library(lib, character.only = TRUE )
     }
 }
@@ -45,13 +44,16 @@ paths <- list()
 paths$sample_batch_info <- "./sample_information.txt"
 paths$kallisto_output   <- "input"
 # Set relative paths:
-paths$kallisto_files_relative <- grep(x       = list.files(paths$kallisto_output, recursive = TRUE),
-                                      pattern = ".h5", 
+paths$kallisto_files_relative <- grep(x = list.files(paths$kallisto_output,
+                                      recursive = TRUE),
+                                      pattern = ".h5",
                                       value   = TRUE)
 paths$kallisto_files <- file.path(paths$kallisto_output,
                                   paths$kallisto_files_relative)
 # Automatically extract file names from kallisto output for colnames
-names(paths$kallisto_files) <- gsub(paths$kallisto_files_relative, pattern = "/.*", replacement = "") 
+names(paths$kallisto_files) <- gsub(paths$kallisto_files_relative,
+                                    pattern = "/.*",
+                                    replacement = "")
 for (filenumber in 1:length(paths$kallisto_files)) {
   current_name <- names(paths$kallisto_files)[filenumber]
   current_file <- paths$kallisto_files[filenumber]
@@ -68,18 +70,18 @@ for (filenumber in 1:length(paths$kallisto_files)) {
 samples     <- data.frame(treatment = names(paths$kallisto_files))
 ## Read in sample information for room and batch:
 samples_information <- read.table(file = paths$sample_batch_info,
-                                  header = TRUE, 
-                                  #col.names = c("sample_name", "treatment", "room", "batch", "caste", "colony"),
+                                  header = TRUE,
                                   row.names = 1)
 ## Make sure 'CON' is the reference:
-samples_information$treatment <- relevel(x = samples_information$treatment, ref = "CON") 
+samples_information$treatment <- relevel(x = samples_information$treatment,
+                                         ref = "CON")
 # sanity check
 if (FALSE == all(samples$treatment %in% rownames(samples_information))) {
-    kill("we have a problem - sample names from files and from batch descriptor file  dont match up")
+    kill("we have a problem - sample names from files and from batch
+         descriptor file  dont match up")
 }
 samples_information
 ```
-
 
 ## Step Three: Import kallisto quantification files using Tximport
 
@@ -91,12 +93,13 @@ Because we do a gene-level analysis first, transcript abundances are summarised 
 # Read in file corresponding to transcripts to gene ids
 ensembl <- useMart("metazoa_mart", host = "metazoa.ensembl.org")
 ensembl <- useDataset("bterrestris_eg_gene", mart = ensembl)
-transcript_to_gene <- getBM(attributes = c("ensembl_transcript_id", "ensembl_gene_id"), 
+transcript_to_gene <- getBM(attributes = c("ensembl_transcript_id",
+                                           "ensembl_gene_id"),
                             mart = ensembl)
-# Use tximport on kallisto files 
+# Use tximport on kallisto files
 ## Counts are estimated counts from kallisto:
-txi_counts <- tximport(paths$kallisto_files, 
-                       type    = "kallisto", 
+txi_counts <- tximport(paths$kallisto_files,
+                       type    = "kallisto",
                        tx2gene = transcript_to_gene,
                        countsFromAbundance = "no")
 # Save object for use in other scripts
@@ -120,24 +123,26 @@ Within the present analysis, two questions can be immediately asked:
   
 ```{r, message = FALSE}
 ## Define reference and alternative caste:
-reference_caste = "workers"
-alternative_caste = "queens"
+reference_caste <- "workers"
+alternative_caste <- "queens"
 
 ## Set queens as reference for caste:
-samples_information$caste <- relevel(x = samples_information$caste, ref = reference_caste) 
+samples_information$caste <- relevel(x = samples_information$caste,
+                                     ref = reference_caste)
 
 ## Rerun model design:
-deseq_txi <- DESeqDataSetFromTximport(txi     = txi_counts, 
-                                      colData = samples_information, 
-                                      design  = ~batch + caste + treatment + caste:treatment)
+deseq_txi <- DESeqDataSetFromTximport(txi     = txi_counts,
+                                      colData = samples_information,
+                                      design  = ~batch + caste + treatment +
+                                              caste:treatment)
 
 ## Perform a pairwise comparison between treatments:
-deseq_object  <- DESeq(deseq_txi, 
-                       test = "Wald", 
+deseq_object  <- DESeq(deseq_txi,
+                       test = "Wald",
                        betaPrior = FALSE)
 
 ## Extract information related to treatments:
-treatment_tmp <- grep("treatment_", resultsNames(deseq_object), value=TRUE)
+treatment_tmp <- grep("treatment_", resultsNames(deseq_object), value = TRUE)
 treatments <- gsub("treatment_", "", treatment_tmp)
 treatments <- gsub("_vs_CON", "", treatments)
 
@@ -150,140 +155,149 @@ non_control_treatments <- treatments[!treatments %in% control]
 for (pesticide in non_control_treatments){
         ## print pesticide to console:
         print(pesticide)
-        
-        ##=====================================================================================
         ## Step One: Condition effect for caste (the main effect)
-        ##=====================================================================================
         ## Contrast pesticide and control:
-        results_ref_caste <- results(deseq_object, contrast=c("treatment", pesticide, control))
+        results_ref_caste <- results(deseq_object,
+                                     contrast = c("treatment",
+                                                  pesticide,
+                                                  control))
         ## Convert to dataframe and sort by significance (adjusted p-value):
         results_ref_caste_df <- as.data.frame(results_ref_caste)
-        
-        ## Reorder by significance and count number of significantly differentially expressed gene:
+        ## Reorder by significance and count number of significantly
+        ## differentially expressed gene:
         results_ref_caste_df_sorted <- results_ref_caste_df[order(results_ref_caste_df$padj), ]
-        
         ## Write table to file:
-        write.table(x = results_ref_caste_df_sorted, 
-                    file = paste("results/", pesticide, "_vs_", control, "_", reference_caste, "_all.tab", sep=""), 
+        write.table(x = results_ref_caste_df_sorted,
+                    file = paste("results/", pesticide,
+                                 "_vs_", control,
+                                 "_", reference_caste,
+                                 "_all.tab", sep = ""),
                     sep = "\t",
                     quote = FALSE)
-        
         ## Count the number of significant genes:
-        results_ref_number_of_sig_genes <- subset(results_ref_caste_df_sorted, padj < 0.05)
-        
+        results_ref_number_sig_genes <- subset(results_ref_caste_df_sorted,
+                                                  padj < 0.05)
         ## Write table to file:
-        write.table(x = results_ref_number_of_sig_genes, 
-                    file = paste("results/", pesticide, "_vs_", control, "_", reference_caste, "_sig.tab", sep=""), 
+        write.table(x = results_ref_number_sig_genes,
+                    file = paste("results/", pesticide,
+                                 "_vs_", control,
+                                 "_", reference_caste,
+                                 "_sig.tab", sep = ""),
                     sep = "\t",
                     quote = FALSE)
-        
         ## Print to console:
-        print(c(paste("The main effect of ", pesticide, " treatment effects ", nrow(results_ref_number_of_sig_genes), " genes", sep="")))
-        
-        ##=====================================================================================
-        ## Step Two: Extract results for main effect of condition plus the interaction term:
-        ##=====================================================================================
+        print(c(paste("The main effect of ",
+                      pesticide, " treatment effects ",
+                      nrow(results_ref_number_sig_genes),
+                      " genes", sep = "")))
+        ## Step Two: Extract results for main effect of condition plus
+        ## the interaction term:
         ## Create interaction term:
-        interaction <- paste("caste", alternative_caste, ".treatment", pesticide, sep="")
+        interaction <- paste("caste", alternative_caste,
+                             ".treatment", pesticide, sep = "")
         ## Create results table:
-        results_alt_caste <- results(deseq_object, 
-                                 list( c(paste("treatment_", pesticide, "_vs_", control, sep = "")),
+        results_alt_caste <- results(deseq_object,
+                                 list( c(paste("treatment_", pesticide,
+                                               "_vs_", control, sep = "")),
                                          c(interaction) ))
         ## Convert to dataframe, sort and count number of significant DEGs:
         results_alt_caste_df <- as.data.frame(results_alt_caste)
-        ## Reorder by significance and count number of significantly differentially expressed gene:
+        ## Reorder by significance and count number of significantly
+        ## differentially expressed gene:
         results_alt_caste_df_sorted <- results_alt_caste_df[order(results_alt_caste_df$padj), ]
-        
         ## Write table to file:
-        write.table(x = results_alt_caste_df_sorted, 
-                    file = paste("results/", pesticide, "_vs_", control, "_", alternative_caste , "_all.tab", sep=""), 
+        write.table(x = results_alt_caste_df_sorted,
+                    file = paste("results/", pesticide,
+                                 "_vs_", control,
+                                 "_", alternative_caste,
+                                 "_all.tab", sep = ""),
                     sep = "\t",
                     quote = FALSE)
-        
         ## Count the number of significant genes:
-        results_alt_number_of_sig_genes <- subset(results_alt_caste_df_sorted, padj < 0.05)
-        
+        results_alt_number_sig_genes <- subset(results_alt_caste_df_sorted,
+                                                  padj < 0.05)
         ## Write table to file:
-        write.table(x = results_alt_number_of_sig_genes, 
-                    file = paste("results/", pesticide, "_vs_", control, "_", alternative_caste , "_sig.tab", sep=""), 
+        write.table(x = results_alt_number_sig_genes,
+                    file = paste("results/", pesticide,
+                                 "_vs_", control,
+                                 "_", alternative_caste,
+                                 "_sig.tab", sep = ""),
                     sep = "\t",
                     quote = FALSE)
-        
         ## Print to console:
-        print(c(paste("Main effect plus interaction effect:", nrow(results_alt_number_of_sig_genes))))
-        
-        ##=====================================================================================
-        ## Step Three: investigate whether treatments effects castes differently:
-        ##=====================================================================================
+        print(c(paste("Main effect plus interaction effect:",
+                      nrow(results_alt_number_sig_genes))))
+        ## Step Three: investigate whether treatments effects
+        ## castes differently:
         ## Create results table to explore interaction term:
-        diff_across_castes <- results(deseq_object, name=interaction)
+        diff_across_castes <- results(deseq_object, name = interaction)
         ## Convert results table into dataframe:
         diff_across_castes_df <- as.data.frame(diff_across_castes)
-        ## Reorder by significance and count number of significantly differentially expressed gene:
+        ## Reorder by significance and count number of significantly
+        ## differentially expressed genes:
         diff_across_castes_df_sorted <- diff_across_castes_df[order(diff_across_castes_df$padj), ]
         ## Count the number of significant genes:
-        diff_across_castes_df_sorted_genes <- nrow(subset(diff_across_castes_df_sorted, padj < 0.05))
+        diff_across_castes_df_genes <- nrow(subset(diff_across_castes_df_sorted,
+                                                   padj < 0.05))
         ## Print to console:
-        print(c(paste("Total number of genes:", diff_across_castes_df_sorted_genes)))
-        
-        ##=====================================================================================
-        ## Step Four: What is the difference between queen and worker irrespective of treatment?
-        ##=====================================================================================
+        print(c(paste("Total number of genes:", diff_across_castes_df_genes)))
+        ## Step Four: What is the difference between queen and worker
+        ## irrespective of treatment?
         ## Create results table:
-        caste_without_treatment <- results(deseq_object, contrast=c("caste", reference_caste, alternative_caste))
+        caste_without_treatment <- results(deseq_object,
+                                           contrast = c("caste",
+                                                        reference_caste,
+                                                        alternative_caste))
         ## Convert results table into dataframe:
         caste_without_treatment_df <- as.data.frame(caste_without_treatment)
         ## Count the number of differentially expressed genes:
         print(nrow(subset(caste_without_treatment_df, padj < 0.05)))
-        
-        ##=====================================================================================
-        ## Step Five: What is the difference between queen and worker with treatment?
-        ##=====================================================================================
-        caste_with_treatment = results(deseq_object, 
-                                       list(c(paste("caste_", 
-                                                    alternative_caste, 
-                                                    "_vs_", 
+        ## Step Five: What is the difference between queen and worker
+        ## with treatment?
+        caste_with_treatment <-  results(deseq_object,
+                                       list(c(paste("caste_",
+                                                    alternative_caste,
+                                                    "_vs_",
                                                     reference_caste, sep = ""),
-                                              interaction))) 
-        
+                                              interaction)))
         ## Convert results table into dataframe:
         caste_with_treatment_df <- as.data.frame(caste_with_treatment)
         ## Print the number of significant genes:
         print(nrow(subset(caste_with_treatment_df, padj < 0.05)))
-        
-        ##=====================================================================================
         ## Step Six: Is the effect of treatment different across castes?
-        ##=====================================================================================
         ## Create results table:
-        diff_across_castes <- results(deseq_object, name=interaction)
+        diff_across_castes <- results(deseq_object, name = interaction)
         ## Convert to dataframe:
         diff_across_castes_df <- as.data.frame(diff_across_castes)
         ## Count the number of differentially expressed genes:
         print(nrow(subset(diff_across_castes_df, padj < 0.05)))
 }
 ```
+
 Run analysis for both pesticide treatments using queen as reference caste. 
 
 ```{r, message=FALSE}
 ## Define reference and alternative caste:
-reference_caste = "queens"
-alternative_caste = "workers"
+reference_caste <- "queens"
+alternative_caste <- "workers"
 
 ## Set queens as reference for caste:
-samples_information$caste <- relevel(x = samples_information$caste, ref = reference_caste) 
+samples_information$caste <- relevel(x = samples_information$caste,
+                                     ref = reference_caste)
 
 ## Rerun model design:
-deseq_txi <- DESeqDataSetFromTximport(txi     = txi_counts, 
-                                      colData = samples_information, 
-                                      design  = ~batch + caste + treatment + caste:treatment)
+deseq_txi <- DESeqDataSetFromTximport(txi     = txi_counts,
+                                      colData = samples_information,
+                                      design  = ~batch + caste + treatment +
+                                              caste:treatment)
 
 ## Perform a pairwise comparison between treatments:
-deseq_object  <- DESeq(deseq_txi, 
-                       test = "Wald", 
+deseq_object  <- DESeq(deseq_txi,
+                       test = "Wald",
                        betaPrior = FALSE)
 
 ## Extract information related to treatments:
-treatment_tmp <- grep("treatment_", resultsNames(deseq_object), value=TRUE)
+treatment_tmp <- grep("treatment_", resultsNames(deseq_object), value = TRUE)
 treatments <- gsub("treatment_", "", treatment_tmp)
 treatments <- gsub("_vs_CON", "", treatments)
 
@@ -296,122 +310,125 @@ non_control_treatments <- treatments[!treatments %in% control]
 for (pesticide in non_control_treatments){
         ## print pesticide to console:
         print(pesticide)
-        
-        ##=====================================================================================
         ## Step One: Condition effect for caste (the main effect)
-        ##=====================================================================================
         ## Contrast pesticide and control:
-        results_ref_caste <- results(deseq_object, contrast=c("treatment", pesticide, control))
-        ## Convert to dataframe and sort by significance (adjusted p-value):
+        results_ref_caste <- results(deseq_object,
+                                     contrast = c("treatment",
+                                                  pesticide,
+                                                  control))
+        ## Convert to dataframe and sort by significance (adjusted p-value)
         results_ref_caste_df <- as.data.frame(results_ref_caste)
-        
-        ## Reorder by significance and count number of significantly differentially expressed gene:
+        ## Reorder by significance and count number of significantly
+        ## differentially expressed gene:
         results_ref_caste_df_sorted <- results_ref_caste_df[order(results_ref_caste_df$padj), ]
-        
         ## Write table to file:
-        write.table(x = results_ref_caste_df_sorted, 
-                    file = paste("results/", pesticide, "_vs_", control, "_", reference_caste, "_all.tab", sep=""), 
+        write.table(x = results_ref_caste_df_sorted,
+                    file = paste("results/", pesticide,
+                                 "_vs_", control,
+                                 "_", reference_caste,
+                                 "_all.tab", sep = ""),
                     sep = "\t",
                     quote = FALSE)
-        
         ## Count the number of significant genes:
-        results_ref_number_of_sig_genes <- subset(results_ref_caste_df_sorted, padj < 0.05)
-        
+        results_ref_number_sig_genes <- subset(results_ref_caste_df_sorted,
+                                                  padj < 0.05)
         ## Write table to file:
-        write.table(x = results_ref_number_of_sig_genes, 
-                    file = paste("results/", pesticide, "_vs_", control, "_", reference_caste, "_sig.tab", sep=""), 
+        write.table(x = results_ref_number_sig_genes,
+                    file = paste("results/", pesticide,
+                                 "_vs_", control,
+                                 "_", reference_caste,
+                                 "_sig.tab", sep = ""),
                     sep = "\t",
                     quote = FALSE)
-        
         ## Print to console:
-        print(c(paste("The main effect of ", pesticide, " treatment effects ", nrow(results_ref_number_of_sig_genes), " genes", sep="")))
-        
-        ##=====================================================================================
-        ## Step Two: Extract results for main effect of condition plus the interaction term:
-        ##=====================================================================================
+        print(c(paste("The main effect of ", pesticide, " treatment effects ",
+                      nrow(results_ref_number_sig_genes), " genes", sep = "")))
+        ## Step Two: Extract results for main effect of condition
+        ## plus the interaction term:
         ## Create interaction term:
-        interaction <- paste("caste", alternative_caste, ".treatment", pesticide, sep="")
-        
+        interaction <- paste("caste", alternative_caste,
+                             ".treatment", pesticide, sep = "")
         ## Create results table:
-        results_alt_caste <- results(deseq_object, 
-                                 list( c(paste("treatment_", pesticide, "_vs_", control, sep = "")),
+        results_alt_caste <- results(deseq_object,
+                                 list( c(paste("treatment_", pesticide,
+                                               "_vs_", control, sep = "")),
                                          c(interaction) ))
         ## Convert to dataframe, sort and count number of significant DEGs:
         results_alt_caste_df <- as.data.frame(results_alt_caste)
-        
-        ## Reorder by significance and count number of significantly differentially expressed gene:
+        ## Reorder by significance and count number of significantly
+        ## differentially expressed gene:
         results_alt_caste_df_sorted <- results_alt_caste_df[order(results_alt_caste_df$padj), ]
-        
         ## Write table to file:
-        write.table(x = results_alt_caste_df_sorted, 
-                    file = paste("results/", pesticide, "_vs_", control, "_", alternative_caste, "_all.tab", sep=""), 
+        write.table(x = results_alt_caste_df_sorted,
+                    file = paste("results/", pesticide,
+                                 "_vs_", control,
+                                 "_", alternative_caste,
+                                 "_all.tab", sep = ""),
                     sep = "\t",
                     quote = FALSE)
-        
         ## Count the number of significant genes:
-        results_alt_number_of_sig_genes <- subset(results_alt_caste_df_sorted, padj < 0.05)
-        
+        results_alt_number_sig_genes <- subset(results_alt_caste_df_sorted,
+                                                  padj < 0.05)
         ## Write table to file:
-        write.table(x = results_alt_number_of_sig_genes, 
-                    file = paste("results/", pesticide, "_vs_", control, "_", alternative_caste, "_sig.tab", sep=""), 
+        write.table(x = results_alt_number_sig_genes,
+                    file = paste("results/", pesticide,
+                                 "_vs_", control,
+                                 "_", alternative_caste,
+                                 "_sig.tab", sep = ""),
                     sep = "\t",
                     quote = FALSE)
-        
         ## Print to console:
-        print(c(paste("Main effect plus interaction effect:", nrow(results_alt_number_of_sig_genes))))
-        
-        ##=====================================================================================
-        ## Step Three: investigate whether treatments effects castes differently:
-        ##=====================================================================================
+        print(c(paste("Main effect plus interaction effect:",
+                      nrow(results_alt_number_sig_genes))))
+        ## Step Three: investigate whether treatments effects
+        ## castes differently:
         ## Create results table to explore interaction term:
-        diff_across_castes <- results(deseq_object, name=interaction)
-        
+        diff_across_castes <- results(deseq_object,
+                                      name = interaction)
         ## Convert results table into dataframe:
         diff_across_castes_df <- as.data.frame(diff_across_castes)
-        
-        ## Reorder by significance and count number of significantly differentially expressed gene:
+        ## Reorder by significance and count number of significantly
+        ## differentially expressed gene:
         diff_across_castes_df_sorted <- diff_across_castes_df[order(diff_across_castes_df$padj), ]
-        
         ## Count the number of significant genes:
-        diff_across_castes_df_sorted_genes <- nrow(subset(diff_across_castes_df_sorted, padj < 0.05))
-        
+        diff_across_castes_df_genes <- nrow(subset(diff_across_castes_df_sorted,
+                                                          padj < 0.05))
         ## Print to console:
-        print(c(paste("Total number of genes:", diff_across_castes_df_sorted_genes)))
-        
-        ##=====================================================================================
-        ## Step Four: What is the difference between queen and worker irrespective of treatment?
-        ##=====================================================================================
+        print(c(paste("Total number of genes:", diff_across_castes_df_genes)))
+        ## Step Four: What is the difference between queen and worker
+        ## irrespective of treatment?
         ## Create results table:
-        caste_without_treatment <- results(deseq_object, contrast=c("caste", reference_caste, alternative_caste))
+        caste_without_treatment <- results(deseq_object,
+                                           contrast = c("caste",
+                                                        reference_caste,
+                                                        alternative_caste))
         ## Convert results table into dataframe:
         caste_without_treatment_df <- as.data.frame(caste_without_treatment)
         ## Count the number of differentially expressed genes:
-        print(nrow(subset(caste_without_treatment_df, padj < 0.05)))
-        
-        ##=====================================================================================
-        ## Step Five: What is the difference between queen and worker with treatment?
-        ##=====================================================================================
-        caste_with_treatment = results(deseq_object, 
-                                       list(c(paste("caste_", 
-                                                    alternative_caste, 
-                                                    "_vs_", 
+        print(nrow(subset(caste_without_treatment_df,
+                          padj < 0.05)))
+        ## Step Five: What is the difference between queen and
+        ## worker with treatment?
+        caste_with_treatment <- results(deseq_object,
+                                       list(c(paste("caste_",
+                                                    alternative_caste,
+                                                    "_vs_",
                                                     reference_caste, sep = ""),
-                                              interaction))) 
-        
+                                              interaction)))
         ## Convert results table into dataframe:
         caste_with_treatment_df <- as.data.frame(caste_with_treatment)
         ## Print the number of significant genes:
-        print(nrow(subset(caste_with_treatment_df, padj < 0.05)))
-        
-        ##=====================================================================================
+        print(nrow(subset(caste_with_treatment_df,
+                          padj < 0.05)))
         ## Step Six: Is the effect of treatment different across castes?
-        ##=====================================================================================
         ## Create results table:
-        diff_across_castes <- results(deseq_object, name=interaction)
+        diff_across_castes <- results(deseq_object,
+                                      name = interaction)
         ## Convert to dataframe:
         diff_across_castes_df <- as.data.frame(diff_across_castes)
         ## Count the number of differentially expressed genes:
-        print(nrow(subset(diff_across_castes_df, padj < 0.05)))
+        print(nrow(subset(diff_across_castes_df,
+                          padj < 0.05)))
 }
 ```
 
@@ -435,16 +452,17 @@ pca_data$name <- gsub("_workers", "_W", pca_data$name)
 ## Plot PCA:
 ggplot(pca_data, aes(PC1, PC2, color = treatment, shape = caste)) +
        geom_point(size = 5) +
-       xlab(paste0("PC1: ",percentVar[1],"% variance")) +
-       ylab(paste0("PC2: ",percentVar[2],"% variance")) + 
+       xlab(paste0("PC1: ", percentVar[1], "% variance")) +
+       ylab(paste0("PC2: ", percentVar[2], "% variance")) +
        coord_fixed() +
        scale_color_manual(values = c("blue", "grey", "black", "red", "green")) +
        theme_bw() +
        #geom_text(label = pca_data$name) +
-       theme(axis.title = element_text(family = "Arial", color = "#666666", face = "bold", size = 16)) 
+       theme(axis.title = element_text(family = "Arial",
+                                       color = "#666666",
+                                       face = "bold",
+                                       size = 16))
    
 ## Save:
 ggsave(filename = "pca_plot_castes.png")
 ```
-
-Following a tutorial: https://rpubs.com/ge600/deseq2
