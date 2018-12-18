@@ -1,8 +1,7 @@
 --- 
 title: "Bombus pesticide exposure: gene expression in head"
 output: gene_level_3treatments.html
-authors: Isabel Fletcher and Joe Colgan
-copyright: Queen Mary University of London
+authors:  Isabel Fletcher, Joe Colgan, Yannick Wurm http://wurmlab.com
 --- 
 
 # Introduction
@@ -95,8 +94,6 @@ if (FALSE == all(samples$treatment %in% rownames(samples_information))) {
 }
 samples_information
 ```
-
-
 ## Step Three: Import kallisto quantification files using Tximport
 
 We used kallisto to obtain estimated counts for each transcript in each condition. 
