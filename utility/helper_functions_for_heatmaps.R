@@ -1,6 +1,6 @@
 ################################################################################################
 ##
-## Author Joe Colgam
+## Author Joe Colgan
 ## Copyright Queen Mary University London
 ## All rights reserved
 ##
