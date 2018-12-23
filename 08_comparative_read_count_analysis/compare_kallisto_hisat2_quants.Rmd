@@ -50,8 +50,6 @@ hisat_htseq_counts_all <- cbind(hisat_htseq_w, hisat_htseq_q)
 
 rownames(hisat_htseq_counts_all) <- hisat_htseq_counts_all$gene_id_W
 hisat_htseq_counts_all$gene_id_W <- NULL
-
-nrow(hisat_htseq_counts_all)
 ```
 
 ## Compare with kallisto counts:
@@ -162,36 +160,79 @@ cor.test(combined.df$kallisto, combined.df$hisat_htseq)
 combined.df <- subset(combined.df, kallisto > 10 &
                              hisat_htseq > 10)
 
+## For the plots, turn off scientific notation:
+options(scipen = 999)
+
 ## Generate plots:
 ## a) Normal plot:
 normal_plot <- ggplot(data = combined.df, aes(x = kallisto,
                                        y = hisat_htseq)) +
-                geom_point(alpha = 0.3) +
+                geom_point(alpha = 0.3, size = 4) +
                 xlab("Kallisto raw gene-level counts") +
-                ylab("HISAT2 HTSeq raw gene-level counts") +
+                ylab("HISAT2-HTSeq raw gene-level counts") +
                 theme_bw()
 
 ## Increase font size for text labels:
 normal_plot <- normal_plot + theme(axis.title = element_text(face = "bold",
-                                               size = "14"),
-                                   axis.text.x = element_text(angle = 45,
-                                                              hjust = 1))
+                                               size = "25"),
+                                   axis.text.x = element_text(size = "20",
+                                                              angle = 45,
+                                                              hjust = 1),
+                                   axis.text.y = element_text(size = "20"))
+
+## Print to console:
+normal_plot
+
+## Save:
+ggsave(file = "correlation_plots_mean_raw_estimated_counts.png",
+       height = 10, width = 20)
 
 
-## Using the average estimated counts generate a plot using log_transformed values:
+## b) Generate a plot using log_transformed values:
 log_plot <- ggplot(data = combined.df, aes(x = kallisto,
                                        y = hisat_htseq)) +
-        geom_point(alpha = 0.3) +
+        geom_point(alpha = 0.3, size = 4) +
         xlab("Kallisto log2 transformed gene-level counts") +
-        ylab("HISAT2 HTSeq log2 transformed gene-level counts") +
+        ylab("HISAT2-HTSeq log2 transformed gene-level counts") +
         coord_trans(x = "log2", y = "log2") +
         theme_bw()
         
 ## Increase font size for text labels:
 log_plot <- log_plot + theme(axis.title = element_text(face = "bold",
-                                               size = "14"),
-                             axis.text.x = element_text(angle = 45,
-                                                        hjust = 1))
+                                               size = "25"),
+                             axis.text.x = element_text(size = "18",
+                                                        angle = 45,
+                                                        hjust = 1),
+                             axis.text.y = element_text(size = "18"))
+
+## Print to console:
+log_plot
+
+## Save:
+ggsave(file = "correlation_plots_mean_log_estimated_counts.png",
+       height = 10, width = 20)
+
+## Plot together:
+ggarrange(normal_plot,
+          log_plot,
+          ncol = 2, nrow = 1,
+          align = "hv",
+          labels = c("A", "B"))
+
+## Save:
+ggsave(file = "two_correlation_plots_estimated_counts.png",
+       height = 10, width = 20)
+
+## Option two for plotting:
+ggarrange(normal_plot,
+          log_plot,
+          ncol = 1, nrow = 2,
+          align = "hv",
+          labels = c("A", "B"))
+
+## Save:
+ggsave(file = "two_correlation_plots_estimated_counts_inverse.png",
+       height = 12, width = 20)
 
 ## Generate a plot using raw and log_transformed values for a random sample:
 random_sample_kallisto <- sample(colnames(txi_counts_df), 1)
@@ -213,39 +254,52 @@ random_sample_df <- subset(random_sample_df,
 random_normal_plot <- ggplot(data = random_sample_df,
                              aes(x = kallisto,
                                  y = hisat_htseq)) +
-                        geom_point(alpha = 0.3) +
+                        geom_point(alpha = 0.3, size = 4) +
                         xlab("Kallisto raw gene-level counts") +
-                        ylab("HISAT2 HTSeq raw gene-level counts") +
+                        ylab("HISAT2-HTSeq raw gene-level counts") +
                         #geom_smooth(method = "lm", formula = y~x) +
                         theme_bw()
 
 ## Increase font size for text labels:
 random_normal_plot <- random_normal_plot +
         theme(axis.title = element_text(face = "bold",
-                                               size = "14"),
-              axis.text.x = element_text(angle = 45,
-                                         hjust = 1))
+                                        size = "25"),
+              axis.text.x = element_text(size = "17",
+                                         angle = 45,
+                                         hjust = 1),
+              axis.text.y = element_text(size = "17"))
 
+## Print to console:
+random_normal_plot
+
+## Save:
+ggsave(file = "correlation_plots_random_raw_estimated_counts.png",
+       height = 10, width = 20)
 
 ## d) Generate a log_transformed plot:
 random_log_plot <- ggplot(data = random_sample_df,
                              aes(x = kallisto,
                                  y = hisat_htseq)) +
-                        geom_point(alpha = 0.3) +
+                        geom_point(alpha = 0.3, size = 4) +
                         xlab("Kallisto log2 transformed gene-level counts") +
-                        ylab("HISAT2 HTSeq log2 transformed gene-level counts") +
+                        ylab("HISAT2-HTSeq log2 transformed gene-level counts") +
                         coord_trans(x = "log2", y = "log2") +
                         theme_bw()
 
 ## Increase font size for text labels:
 random_log_plot <- random_log_plot +
                    theme(axis.title = element_text(face = "bold",
-                                               size = "14"),
-                         axis.text.x = element_text(angle = 45,
-                                                    hjust = 1))
+                                               size = "25"),
+                         axis.text.x = element_text(size = "17",
+                                                    angle = 45,
+                                                    hjust = 1),
+                         axis.text.y = element_text(size = "17"))
+## Print to console:
+random_log_plot
 
-## Turn off scientific notation:
-options(scipen = 999)
+## Save:
+ggsave(file = "correlation_plots_random_log_estimated_counts.png",
+       height = 10, width = 20)
 
 ## Plot all four plot:
 ggarrange(normal_plot,
@@ -259,17 +313,6 @@ ggarrange(normal_plot,
 ## Save to file:
 ggsave(file = "four_correlation_plots_estimated_counts.png",
        height = 15, width = 25)
-
-## Problem with import to Google Docs, figure may be too big:
-ggarrange(normal_plot,
-          log_plot,
-          ncol = 2, nrow = 1,
-          align = "hv",
-          labels = c("A", "B"))
-
-## Save:
-ggsave(file = "two_correlation_plots_estimated_counts.png",
-       height = 10, width = 20)
 
 ## Problem with import to Google Docs, figure may be too big:
 ggarrange(random_normal_plot,
