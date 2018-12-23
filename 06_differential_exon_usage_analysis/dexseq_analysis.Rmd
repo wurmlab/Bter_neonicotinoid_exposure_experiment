@@ -1,5 +1,5 @@
 ---
-title: "dexseq_analysis"
+title: "Bombus pesticide exposure: gene expression in head"
 output: dexseq_analysis.html
 author: Joe Colgan, Yannick Wurm http://wurmlab.com
 ---
