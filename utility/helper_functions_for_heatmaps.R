@@ -1,6 +1,6 @@
 ################################################################################################
 ##
-## Author Joe Colgan
+## Author Joe Colgan http://wurmlab.com
 ## Copyright Queen Mary University London
 ## All rights reserved
 ##
