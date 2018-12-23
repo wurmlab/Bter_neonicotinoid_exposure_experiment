@@ -10,6 +10,30 @@ module load samtools/1.3.1
 module load qualimap/2.2.1 
 module load multiqc/0.7
 
+## Create input directory:
+mkdir input
+cd input
+
+## Link raw sequences for hiseq and nextseq runs for both castes:
+ln -s ~/2018-09-19-bombus_rnaseq_clo_imi_queen_worker/input/2018-09-19-kallisto_quantification_queens/fastq_all/*.fastq.gz .
+ln -s ~/2018-09-19-bombus_rnaseq_clo_imi_queen_worker/input/2018-09-19-kallisto_quantification_workers/fastq_all/*.fastq.gz .
+
+## Exit input directory
+cd ../
+
+## Create results directory:
+mkdir results
+cd results
+
+## Link fastq files:
+ln -s ../input/*.fastq.gz .
+
+## Run fastqc for each fastq file:
+for name in *.fastq.gz; 
+do 
+fastqc "$name" -t 40 ; 
+done
+
 ## Link aligned sorted sam file:
 ln -s ../2018-09-18-spliced_alignment_worker/tmp/quant/ input_workers
 ln -s ../2018-11-30_spliced_alignment_queen-tmp/tmp/quant/ input_queens
