@@ -108,7 +108,11 @@ heatmap_plot_worker <- function(input){
                                       legend.position = "top") +
                                 scale_y_discrete(position = "right") +
                                 labs(fill = "Log fold change") +
-                                theme(axis.text.y = element_text(face = c(rep("plain", 22),
+                                theme(axis.text.y = element_text(face = c(rep("plain", 4),
+                                                                            "italic",
+                                                                            rep("plain", 10),
+                                                                            "italic",
+                                                                            rep("plain", 6),
                                                                             "bold",
                                                                             rep("plain", 31),
                                                                             "italic")))
