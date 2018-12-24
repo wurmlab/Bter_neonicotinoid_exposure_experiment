@@ -27,8 +27,8 @@ for (lib in libraries) {
 }
 
 ## Load custom function:
-source("../../code/utility/description_from_LOCid.R")
-source("../../code/utility/helper_functions_for_heatmaps.R")
+source("description_from_LOCid.R")
+source("helper_functions_for_heatmaps.R")
 
 ## Assign path for output:
 output <- "results/heatmap_figure"
