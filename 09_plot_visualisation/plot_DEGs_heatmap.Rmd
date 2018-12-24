@@ -57,6 +57,6 @@ ggarrange(caste_plotter(castes[1]), caste_plotter(castes[2]),
                            legend = "top")
 
 ## Save output:
-ggsave("results/heatmap_figure/combined_worker_queen_heatmap.png",
+ggsave("results/heatmap_figure/combined_worker_queen_heatmap.pdf",
        width = 20, height = 18)
 ```
