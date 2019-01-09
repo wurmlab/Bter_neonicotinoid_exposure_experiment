@@ -189,3 +189,65 @@ ggarrange(queen_go_plots, worker_go_plots,
           ncol = 1, nrow = 2)
 
 ```
+
+There is a bigger difference in the number of overlapping gene ontology terms in comparison to differentially expressed genes shared within each caste. As gene ontology term enrichment analysis performs a rank-based test, it is plausible that the difference in ranks may be affecting the number of terms identified. The next step would be to plot ranks:
+
+```{r, message = FALSE}
+## For queen samples, 
+## Create empty hash to contain subsetted signficant terms:
+de_tables <- hash()
+
+## For each dataframe, subset the name of signficant genes:
+for(name in names(sample_list)){
+        print(name)
+        ## Subset based on significance:
+        de_tables[[name]] <- as.data.frame(cbind(row.names(sample_list[[name]]), sample_list[[name]]$pvalue))
+        ## Updated column names:
+        colnames(de_tables[[name]]) <- c("locus", "raw_pvalue")
+        ## Sort by raw_pvalue:
+        de_tables[[name]] <- de_tables[[name]][order(de_tables[[name]]$raw_pvalue), ]
+        ## Assign a rank:
+        de_tables[[name]]$rank <- 1:nrow(de_tables[[name]])
+        print(nrow(de_tables[[name]]))
+}
+
+## As the HISAT2 datasets have less genes, identify and subset shared genes with the Kallisto dataset:
+genes_of_interest <- de_tables$queen_hisat2$locus
+
+de_tables$queen_kallisto_matched <- de_tables$queen_kallisto[match(genes_of_interest, de_tables$queen_kallisto$locus),]
+
+## Generate a plot to compare ranks:
+queen_comparison_ranks <- as.data.frame(cbind(as.character(unlist(de_tables$queen_hisat2$locus)),
+                                              de_tables$queen_kallisto_matched$rank,
+                                              de_tables$queen_hisat2$rank))
+
+## Update column names:
+colnames(queen_comparison_ranks) <- c("locus", "kallisto_rank", "hisat2_rank")
+queen_comparison_ranks$kallisto_rank <- as.numeric(unlist(queen_comparison_ranks$kallisto_rank))
+queen_comparison_ranks$hisat2_rank <- as.numeric(unlist(queen_comparison_ranks$hisat2_rank))
+
+## Plot:
+log_plot <- ggplot(data = queen_comparison_ranks,
+                             aes(x = kallisto_rank,
+                                 y = hisat2_rank)) +
+                        geom_point(alpha = 0.3, size = 4) +
+                        xlab("Kallisto log2 transformed gene-level counts") +
+                        ylab("HISAT2-HTSeq log2 transformed gene-level counts") +
+                        coord_trans(x = "log2", y = "log2") +
+                        theme_bw()
+
+nonlog_plot <- ggplot(data = queen_comparison_ranks,
+                             aes(x = kallisto_rank,
+                                 y = hisat2_rank)) +
+                        geom_point(alpha = 0.3, size = 4) +
+                        xlab("Kallisto log2 transformed gene-level counts") +
+                        ylab("HISAT2-HTSeq log2 transformed gene-level counts") +
+                        #coord_trans(x = "log2", y = "log2") +
+                        theme_bw()
+## Plot:
+nonlog_plot
+
+## Check the correlation between ranks:
+cor.test(as.numeric(unlist(queen_comparison_ranks$kallisto_rank)),
+         as.numeric(unlist(queen_comparison_ranks$hisat2_rank)))
+```
