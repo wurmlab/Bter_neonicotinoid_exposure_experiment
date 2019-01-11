@@ -1,6 +1,6 @@
 ---
 title: "Bombus pesticide exposure: gene expression in head"
-output: prepare_data_for_euler_plot.html
+output: run_kallisto_hisat2_differential_expression_comparison.html
 author: Joe Colgan, Yannick Wurm http://wurmlab.com
 ---
 
@@ -31,51 +31,31 @@ Read in input files and store as dataframes.
 
 ```{r, message=FALSE}
 ## Read in input files for queens:
-queen_kallisto <- read.table(file = "./input/queen/kallisto_queen_de_genes_for_topGO.txt", 
-                             header = TRUE) 
-queen_hisat2 <- read.table(file = "./input/queen/hisat2_queen_de_genes_for_topGO.txt", 
-                           header = TRUE)
+queen_kallisto <- read.table(file = "./input/queen/kallisto_queen_de_genes_sig_for_euler.tmp",
+                             header = FALSE,
+                             col.names = "ids")$ids
+queen_hisat2 <- read.table(file = "./input/queen/hisat2_queen_de_genes_sig_for_euler.tmp",
+                           header = FALSE,
+                           col.names = "ids")$ids
 
 ## Read in input files for workers:
-worker_kallisto <- read.table(file = "./input/worker/kallisto_worker_de_genes_for_topGO.txt", 
-                             header = TRUE) 
-worker_hisat2 <- read.table(file = "./input/worker/hisat2_worker_de_genes_for_topGO.txt", 
-                           header = TRUE)
+worker_kallisto <- read.table(file = "./input/worker/kallisto_worker_de_genes_sig_for_euler.tmp",
+                             header = FALSE,
+                             col.names = "ids")$ids 
+worker_hisat2 <- read.table(file = "./input/worker/hisat2_worker_de_genes_sig_for_euler.tmp",
+                           header = FALSE,
+                             col.names = "ids")$ids
 ```
 
-## Step Two: Subset significantly differentially expressed genes.
-
-```{r, message=FALSE}
-## Create list:
-sample_list <-   hash(queen_kallisto = queen_kallisto,
-                       queen_hisat2 = queen_hisat2,
-                       worker_kallisto = worker_kallisto,
-                       worker_hisat2 = worker_hisat2)
-
-## Create empty hash to contain subsetted signficant genes:
-deseq2_wald_tables <- hash()
-## Create a list to populate with the names of significant genes:
-de_genes_wald_names <- list()
-
-## For each dataframe, subset the name of signficant genes:
-for(name in names(sample_list)){
-        print(name)
-        ## Subset based on significance:
-        deseq2_wald_tables[[name]] <- subset(sample_list[[name]], padj < 0.05)
-        print(nrow(deseq2_wald_tables[[name]]))
-        ## Subset names of significant genes:
-        de_genes_wald_names[[name]] <- row.names(deseq2_wald_tables[[name]])
-}
-```
 ## Step Three: Combine input gene lists into a single list:
 
 ```{r, message = FALSE}
 ## Combine lists:
-venneu_queen <- euler(combinations = list("Kallisto \nQueen" = de_genes_wald_names$queen_kallisto,
-                                    "HISAT2-HTSeq \nQueen" = de_genes_wald_names$queen_hisat2))
+venneu_queen <- euler(combinations = list("Kallisto \nQueen" = queen_kallisto,
+                                    "HISAT2-HTSeq \nQueen" = queen_hisat2))
 
-venneu_worker <- euler(combinations = list("Kallisto \nWorker" = de_genes_wald_names$worker_kallisto,
-                                    "HISAT2-HTSeq \nWorker" = de_genes_wald_names$worker_hisat2))
+venneu_worker <- euler(combinations = list("Kallisto \nWorker" = worker_kallisto,
+                                    "HISAT2-HTSeq \nWorker" = worker_hisat2))
 
 ```
 
@@ -88,166 +68,14 @@ queen_plots <- plot(venneu_queen,
   edges = TRUE,
   labels = list(fontsize = 10))
 
-worker_plots<- plot(venneu_worker,
+worker_plots <- plot(venneu_worker,
   quantities = TRUE,
   edges = TRUE,
   labels = list(fontsize = 10))
 
 ## Generate a combined plot:
 ggarrange(queen_plots, worker_plots,
-          labels = c("A) Queen DE genes", 
+          labels = c("A) Queen DE genes",
                      "B) Worker DE genes"),
           ncol = 1, nrow = 2)
-
-```
-## Step Six: Overlap in enriched gene ontology terms
-As an additional measure to explore the overlap the results of the differential expression analyses using Kallisto estimated counts and HISAT2-HTSeq actual counts, we explore the overlap in gene ontology terms identified as enriched within each dataset:
-
-```{r, message = FALSE}
-## Read in significant gene ontology term enriched for each caste within each dataset:
-## Read in queen data:
-queen_kallisto_go <- read.table(file = "./input/queen/gene_ontology/kallisto_queen_combined_sig_terms.txt",
-                                header = TRUE)
-
-queen_hisat2_go <- read.table(file = "./input/queen/gene_ontology/hisat2_queen_combined_sig_terms.txt",
-                                header = TRUE)
-
-## Read in worker data:
-worker_kallisto_go <- read.table(file = "./input/worker/gene_ontology/kallisto_worker_combined_sig_terms.txt",
-                                header = TRUE)
-
-worker_hisat2_go <- read.table(file = "./input/worker/gene_ontology/hisat2_worker_combined_sig_terms.txt",
-                                header = TRUE)
-
-## Create list:
-go_list <-   hash(queen_kallisto_go = queen_kallisto_go,
-                  queen_hisat2_go = queen_hisat2_go,
-                  worker_kallisto_go = worker_kallisto_go,
-                  worker_hisat2_go = worker_hisat2_go)
-
-## Create empty hash to contain subsetted signficant terms:
-go_tables <- hash()
-
-## Create a list to populate with the names of significant terms:
-go_names <- list()
-
-## Ensure that adjusted p-values to subset are numeric:
-## For each dataframe, subset the name of signficant genes:
-for(name in names(go_list)){
-        print(name)
-        ## Subset based on significance:
-        go_list[[name]]$weight_ks <- as.character(unlist(go_list[[name]]$weight_ks))
-        go_tables[[name]] <- subset(go_list[[name]], weight_ks < 0.05)
-        print(nrow(go_tables[[name]]))
-        ## Subset names of significant genes:
-        go_names[[name]] <- go_tables[[name]]$GO.ID
-}
-```
-## Step Seven: Combine input term lists into a single list:
-
-```{r, message = FALSE}
-## Combine lists:
-venneu_all_go <- euler(combinations = list("Kallisto \nQueen" = go_names$queen_kallisto_go,
-                                    "HISAT2-HTSeq \nQueen" = go_names$queen_hisat2_go,
-                                    "Kallisto \nWorker" = go_names$worker_kallisto_go,
-                                    "HISAT2-HTSeq \nWorker" = go_names$worker_hisat2_go))
-
-venneu_queen_go <- euler(combinations = list("Kallisto \nQueen" = go_names$queen_kallisto_go,
-                                    "HISAT2-HTSeq \nQueen" = go_names$queen_hisat2_go))
-
-
-venneu_worker_go <- euler(combinations = list("Kallisto \nWorker" = go_names$worker_kallisto,
-                                    "HISAT2-HTSeq \nWorker" = go_names$worker_hisat2))
-
-```
-
-## Step Eight: Generate plots:
-
-```{r, message = FALSE}
-## Generate plot:
-all_go_plots <- plot(venneu_all_go,
-  quantities = TRUE,
-  edges = TRUE,
-  labels = list(fontsize = 10))
-
-## Generate plot for queens:
-queen_go_plots <- plot(venneu_queen_go,
-  quantities = TRUE,
-  edges = TRUE,
-  labels = list(fontsize = 10))
-
-## Generate plot for workers:
-worker_go_plots<- plot(venneu_worker_go,
-  quantities = TRUE,
-  edges = TRUE,
-  labels = list(fontsize = 10))
-
-## Generate a combined plot:
-ggarrange(queen_go_plots, worker_go_plots,
-          labels = c("A) Queen GO terms", 
-                     "B) Worker GO terms"),
-          ncol = 1, nrow = 2)
-
-```
-
-There is a bigger difference in the number of overlapping gene ontology terms in comparison to differentially expressed genes shared within each caste. As gene ontology term enrichment analysis performs a rank-based test, it is plausible that the difference in ranks may be affecting the number of terms identified. The next step would be to plot ranks:
-
-```{r, message = FALSE}
-## For queen samples, 
-## Create empty hash to contain subsetted signficant terms:
-de_tables <- hash()
-
-## For each dataframe, subset the name of signficant genes:
-for(name in names(sample_list)){
-        print(name)
-        ## Subset based on significance:
-        de_tables[[name]] <- as.data.frame(cbind(row.names(sample_list[[name]]), sample_list[[name]]$pvalue))
-        ## Updated column names:
-        colnames(de_tables[[name]]) <- c("locus", "raw_pvalue")
-        ## Sort by raw_pvalue:
-        de_tables[[name]] <- de_tables[[name]][order(de_tables[[name]]$raw_pvalue), ]
-        ## Assign a rank:
-        de_tables[[name]]$rank <- 1:nrow(de_tables[[name]])
-        print(nrow(de_tables[[name]]))
-}
-
-## As the HISAT2 datasets have less genes, identify and subset shared genes with the Kallisto dataset:
-genes_of_interest <- de_tables$queen_hisat2$locus
-
-de_tables$queen_kallisto_matched <- de_tables$queen_kallisto[match(genes_of_interest, de_tables$queen_kallisto$locus),]
-
-## Generate a plot to compare ranks:
-queen_comparison_ranks <- as.data.frame(cbind(as.character(unlist(de_tables$queen_hisat2$locus)),
-                                              de_tables$queen_kallisto_matched$rank,
-                                              de_tables$queen_hisat2$rank))
-
-## Update column names:
-colnames(queen_comparison_ranks) <- c("locus", "kallisto_rank", "hisat2_rank")
-queen_comparison_ranks$kallisto_rank <- as.numeric(unlist(queen_comparison_ranks$kallisto_rank))
-queen_comparison_ranks$hisat2_rank <- as.numeric(unlist(queen_comparison_ranks$hisat2_rank))
-
-## Plot:
-log_plot <- ggplot(data = queen_comparison_ranks,
-                             aes(x = kallisto_rank,
-                                 y = hisat2_rank)) +
-                        geom_point(alpha = 0.3, size = 4) +
-                        xlab("Kallisto log2 transformed gene-level counts") +
-                        ylab("HISAT2-HTSeq log2 transformed gene-level counts") +
-                        coord_trans(x = "log2", y = "log2") +
-                        theme_bw()
-
-nonlog_plot <- ggplot(data = queen_comparison_ranks,
-                             aes(x = kallisto_rank,
-                                 y = hisat2_rank)) +
-                        geom_point(alpha = 0.3, size = 4) +
-                        xlab("Kallisto log2 transformed gene-level counts") +
-                        ylab("HISAT2-HTSeq log2 transformed gene-level counts") +
-                        #coord_trans(x = "log2", y = "log2") +
-                        theme_bw()
-## Plot:
-nonlog_plot
-
-## Check the correlation between ranks:
-cor.test(as.numeric(unlist(queen_comparison_ranks$kallisto_rank)),
-         as.numeric(unlist(queen_comparison_ranks$hisat2_rank)))
 ```
