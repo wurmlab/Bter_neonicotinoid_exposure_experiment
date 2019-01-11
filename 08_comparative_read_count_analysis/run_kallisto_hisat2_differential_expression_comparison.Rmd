@@ -47,7 +47,7 @@ worker_hisat2 <- read.table(file = "./input/worker/hisat2_worker_de_genes_sig_fo
                              col.names = "ids")$ids
 ```
 
-## Step Three: Combine input gene lists into a single list:
+## Step Two: Create combinations for plotting:
 
 ```{r, message = FALSE}
 ## Combine lists:
@@ -59,23 +59,27 @@ venneu_worker <- euler(combinations = list("Kallisto \nWorker" = worker_kallisto
 
 ```
 
-## Step Four: Generate plot:
+## Step Three: Generate plot:
 
 ```{r, message = FALSE}
 ## Generate plot:
 queen_plots <- plot(venneu_queen,
   quantities = TRUE,
   edges = TRUE,
-  labels = list(fontsize = 10))
+  labels = list(fontsize = 12))
 
 worker_plots <- plot(venneu_worker,
   quantities = TRUE,
   edges = TRUE,
-  labels = list(fontsize = 10))
+  labels = list(fontsize = 12))
 
 ## Generate a combined plot:
 ggarrange(queen_plots, worker_plots,
           labels = c("A) Queen DE genes",
                      "B) Worker DE genes"),
           ncol = 1, nrow = 2)
+
+## Save picture:
+ggsave("caste_differential_expression_euler_plot.png",
+       height = 10, width = 8)
 ```
