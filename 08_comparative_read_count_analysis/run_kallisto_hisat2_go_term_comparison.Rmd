@@ -1,0 +1,82 @@
+---
+title: "Bombus pesticide exposure: gene expression in head"
+output: run_kallisto_hisat2_go_term_comparison.html
+author: Joe Colgan, Yannick Wurm http://wurmlab.com
+---
+
+## Introduction
+This script takes tab-delimited text files as input, which contain significant gene ontology terms enriched genes as identified by DESeq2.  
+The present script takes input for both bumblebee castes (queens and workers) and generates a euler graph for each.
+These euler graphs are saved as output as a .png file.  
+
+The first step is to load libraries required for the present analysis. 
+
+```{r, message=FALSE}
+# Load libraries; install from scratch if needed
+libraries <- c("ggplot2", "lintr", "ggpubr", "hash", "eulerr")
+for (lib in libraries) {
+    if (require(package = lib, character.only = TRUE)) {
+        print("Successful")
+    } else {
+        print("Installing")
+        source("https://bioconductor.org/biocLite.R")
+        biocLite(pkgs = lib)
+        library(lib, character.only = TRUE )
+    }
+}
+```
+
+## Step One: Load input files:
+Read in input files and store as dataframes. 
+
+```{r, message = FALSE}
+## Read in significant gene ontology term enriched for each caste within each dataset:
+## Read in input files for queens:
+queen_kallisto <- read.table(file = "./input_for_euler/queen/kallisto_combined_terms.txt",
+                             header = FALSE,
+                             col.names = "ids")$ids
+queen_hisat2 <- read.table(file = "./input_for_euler/queen/hisat2_combined_terms.txt",
+                             header = FALSE,
+                             col.names = "ids")$ids
+
+## Read in input files for workers:
+worker_kallisto <- read.table(file = "./input_for_euler/worker/kallisto_combined_terms.txt",
+                             header = FALSE,
+                             col.names = "ids")$ids
+worker_hisat2 <- read.table(file = "./input_for_euler/worker/hisat2_combined_terms.txt",
+                           header = FALSE,
+                             col.names = "ids")$ids
+```
+
+## Step Two: Create combinations for plotting:
+
+```{r, message = FALSE}
+## Combine lists:
+venneu_queen <- euler(combinations = list("Kallisto \nQueen" = queen_kallisto,
+                                    "HISAT2-HTSeq \nQueen" = queen_hisat2))
+
+venneu_worker <- euler(combinations = list("Kallisto \nWorker" = worker_kallisto,
+                                    "HISAT2-HTSeq \nWorker" = worker_hisat2))
+
+```
+
+## Step Three: Generate plot:
+
+```{r, message = FALSE}
+## Generate plot:
+queen_plots <- plot(venneu_queen,
+  quantities = TRUE,
+  edges = TRUE,
+  labels = list(fontsize = 10))
+
+worker_plots <- plot(venneu_worker,
+  quantities = TRUE,
+  edges = TRUE,
+  labels = list(fontsize = 10))
+
+## Generate a combined plot:
+ggarrange(queen_plots, worker_plots,
+          labels = c("A) Queen DE genes",
+                     "B) Worker DE genes"),
+          ncol = 1, nrow = 2)
+```
