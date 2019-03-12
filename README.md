@@ -3,7 +3,7 @@
 This repository contains all scripts used for the differential expression analysis of _Bombus terrestris_ workers and queens in response to neonicotinoid exposure. This was developed as part of a NERC-funded project reported implemented in [Yannick Wurm's lab at Queen Mary University of London](http://wurmlab.com). Findings are reported in the following manuscript: 
 
 Colgan, T.J., Fletcher, I.K., Arce, A.N., Gill, R.J., Ramos Rodrigues, A., Stolle, E., Chittka, L. and Wurm, Y.  
-**Caste- and pesticide-specific effects of neonicotinoid pesticide exposure on gene expression in bumblebees**. *in prep*.  
+**[Caste- and pesticide-specific effects of neonicotinoid pesticide exposure on gene expression in bumblebees](https://doi.org/10.1111/mec.15047)**. *Molecular Ecology (2019)*.  
 
 ## License
 
